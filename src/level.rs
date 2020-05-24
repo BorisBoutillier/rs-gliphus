@@ -7,10 +7,12 @@ use crate::{
     },
     map,
 };
+use bracket_lib::prelude::*;
 
 pub fn load_level(gs: &mut State) {
     let mut map = map::Map::new(10, 10);
     map.set_tiletype(5, 0, map::TileType::Exit);
+    gs.ecs.delete_all();
     gs.rsrc.insert(map);
     gs.ecs.insert(
         (Player {}, BlocksTile {}),
@@ -18,8 +20,8 @@ pub fn load_level(gs: &mut State) {
             Position { x: 5, y: 5 },
             Renderable {
                 glyph: PLAYER,
-                fg: rltk::RGB::named(rltk::YELLOW),
-                bg: rltk::RGB::named(rltk::BLACK),
+                fg: RGB::named(YELLOW),
+                bg: RGB::named(BLACK),
                 render_order: 0,
             },
         )],
@@ -30,8 +32,8 @@ pub fn load_level(gs: &mut State) {
             Position { x: 6, y: 7 },
             Renderable {
                 glyph: MOVABLE_BLOCK,
-                fg: rltk::RGB::named(rltk::ORANGE),
-                bg: rltk::RGB::named(rltk::BLACK),
+                fg: RGB::named(ORANGE),
+                bg: RGB::named(BLACK),
                 render_order: 1,
             },
         )],
@@ -46,8 +48,8 @@ pub fn load_level(gs: &mut State) {
             },
             Renderable {
                 glyph: WEIGHT_PLATE,
-                fg: rltk::RGB::named(rltk::RED),
-                bg: rltk::RGB::named(rltk::BLACK),
+                fg: RGB::named(RED),
+                bg: RGB::named(BLACK),
                 render_order: 2,
             },
         )],
@@ -64,8 +66,8 @@ pub fn load_level(gs: &mut State) {
                 },
                 Renderable {
                     glyph: LASER_RECEPTOR,
-                    fg: rltk::RGB::named(rltk::ORANGE),
-                    bg: rltk::RGB::named(rltk::BLACK),
+                    fg: RGB::named(ORANGE),
+                    bg: RGB::named(BLACK),
                     render_order: 2,
                 },
             ),
@@ -77,8 +79,8 @@ pub fn load_level(gs: &mut State) {
                 },
                 Renderable {
                     glyph: LASER_RECEPTOR,
-                    fg: rltk::RGB::named(rltk::ORANGE),
-                    bg: rltk::RGB::named(rltk::BLACK),
+                    fg: RGB::named(ORANGE),
+                    bg: RGB::named(BLACK),
                     render_order: 2,
                 },
             ),
@@ -95,8 +97,8 @@ pub fn load_level(gs: &mut State) {
             },
             Renderable {
                 glyph: DOOR_H_CLOSED,
-                fg: rltk::RGB::named(rltk::RED),
-                bg: rltk::RGB::named(rltk::BLACK),
+                fg: RGB::named(RED),
+                bg: RGB::named(BLACK),
                 render_order: 1,
             },
         )],
@@ -114,8 +116,8 @@ pub fn load_level(gs: &mut State) {
             Position { x: 7, y: 8 },
             Renderable {
                 glyph: LASER_N,
-                fg: rltk::RGB::named(rltk::LIGHT_BLUE),
-                bg: rltk::RGB::named(rltk::BLACK),
+                fg: RGB::named(LIGHT_BLUE),
+                bg: RGB::named(BLACK),
                 render_order: 1,
             },
         )],
@@ -133,8 +135,8 @@ pub fn load_level(gs: &mut State) {
             Position { x: 3, y: 4 },
             Renderable {
                 glyph: LASER_E,
-                fg: rltk::RGB::named(rltk::LIGHT_BLUE),
-                bg: rltk::RGB::named(rltk::BLACK),
+                fg: RGB::named(LIGHT_BLUE),
+                bg: RGB::named(BLACK),
                 render_order: 1,
             },
         )],

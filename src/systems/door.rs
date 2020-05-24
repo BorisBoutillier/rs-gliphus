@@ -1,6 +1,7 @@
 use crate::components::{Activable, Door, Renderable};
 use crate::glyphs::*;
 use crate::map;
+use bracket_lib::prelude::*;
 use legion::prelude::*;
 
 pub fn door_system() -> Box<dyn Schedulable> {
@@ -27,8 +28,8 @@ pub fn door_system() -> Box<dyn Schedulable> {
                         entity,
                         Renderable {
                             glyph: DOOR_H_CLOSED,
-                            fg: rltk::RGB::named(rltk::RED),
-                            bg: rltk::RGB::named(rltk::BLACK),
+                            fg: RGB::named(RED),
+                            bg: RGB::named(BLACK),
                             render_order: 1,
                         },
                     );

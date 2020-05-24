@@ -3,6 +3,7 @@ use crate::{
     glyphs::*,
     State,
 };
+use bracket_lib::prelude::*;
 use legion::prelude::*;
 use legion::systems::SubWorld;
 
@@ -21,6 +22,16 @@ pub struct Map {
     pub height: i32,
 }
 impl Map {
+    pub fn empty() -> Map {
+        Map {
+            tiles: vec![],
+            blocked_tiles: vec![],
+            content_tiles: vec![],
+            lasered_tiles: vec![],
+            width: 0,
+            height: 0,
+        }
+    }
     pub fn new(width: i32, height: i32) -> Map {
         let mut map = Map {
             tiles: vec![TileType::Floor; (width * height) as usize],
@@ -40,6 +51,10 @@ impl Map {
             map.set_tiletype(width - 1, y, TileType::Wall);
         }
         map
+    }
+    pub fn is_exit(&self, x: i32, y: i32) -> bool {
+        let idx = self.xy_idx(x, y);
+        self.tiles[idx] == TileType::Exit
     }
     pub fn set_tiletype(&mut self, x: i32, y: i32, tiletype: TileType) {
         let idx = self.xy_idx(x, y);
@@ -118,7 +133,7 @@ impl Map {
     fn idx_xy(&self, idx: usize) -> (i32, i32) {
         (idx as i32 % self.width, idx as i32 / self.width)
     }
-    pub fn draw(&self, ctx: &mut rltk::Rltk, start_x: i32, start_y: i32) {
+    pub fn draw(&self, ctx: &mut BTerm, start_x: i32, start_y: i32) {
         for (idx, tile) in self.tiles.iter().enumerate() {
             let (x, y) = self.idx_xy(idx);
             // Render a tile depending upon the tile type
@@ -135,19 +150,13 @@ impl Map {
                     } else {
                         FLOOR
                     };
-                    ctx.set(start_x + x, start_y + y, rltk::GRAY, rltk::BLACK, glyph);
+                    ctx.set(start_x + x, start_y + y, GRAY, BLACK, glyph);
                 }
                 TileType::Wall => {
-                    ctx.set(
-                        start_x + x,
-                        start_y + y,
-                        rltk::BLUE_VIOLET,
-                        rltk::BLACK,
-                        WALL,
-                    );
+                    ctx.set(start_x + x, start_y + y, BLUE_VIOLET, BLACK, WALL);
                 }
                 TileType::Exit => {
-                    ctx.set(start_x + x, start_y + y, rltk::CYAN, rltk::BLACK, EXIT);
+                    ctx.set(start_x + x, start_y + y, CYAN, BLACK, EXIT);
                 }
             }
         }

@@ -5,7 +5,6 @@ authors = ["Boris Boutillier <boris.boutillier@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-rltk = { version = "*" }
 bracket-lib = "*"
 legion = { git = "https://github.com/TomGillen/legion" }
 tracing-subscriber = "*"

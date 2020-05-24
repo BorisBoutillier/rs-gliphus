@@ -1,6 +1,8 @@
 use super::State;
 use crate::components::{Player, Position};
 use crate::map;
+use crate::RunState;
+use bracket_lib::prelude::*;
 use legion::prelude::*;
 
 pub fn try_move_player(delta_x: i32, delta_y: i32, gs: &mut State) {
@@ -28,16 +30,21 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, gs: &mut State) {
     }
 }
 
-pub fn player_input(gs: &mut State, ctx: &mut rltk::Rltk) {
-    // Player movement
+pub fn game_turn_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
     match ctx.key {
-        None => {} // Nothing happened
+        None => {
+            return RunState::GameAwaitingInput;
+        }
         Some(key) => match key {
-            rltk::VirtualKeyCode::Left => try_move_player(-1, 0, gs),
-            rltk::VirtualKeyCode::Right => try_move_player(1, 0, gs),
-            rltk::VirtualKeyCode::Up => try_move_player(0, -1, gs),
-            rltk::VirtualKeyCode::Down => try_move_player(0, 1, gs),
-            _ => {}
+            VirtualKeyCode::Left => try_move_player(-1, 0, gs),
+            VirtualKeyCode::Right => try_move_player(1, 0, gs),
+            VirtualKeyCode::Up => try_move_player(0, -1, gs),
+            VirtualKeyCode::Down => try_move_player(0, 1, gs),
+            VirtualKeyCode::Escape => return RunState::Menu,
+            _ => {
+                return RunState::GameAwaitingInput;
+            }
         },
     }
+    RunState::GameTurn
 }

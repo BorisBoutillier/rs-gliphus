@@ -2,6 +2,7 @@ use legion::prelude::*;
 mod activable;
 mod door;
 mod laser;
+mod level_end;
 mod map_indexing;
 
 pub fn build_systems() -> Schedule {
@@ -12,5 +13,6 @@ pub fn build_systems() -> Schedule {
         .add_system(activable::activable_system())
         .flush() // Following system need active state up to date
         .add_system(door::door_system())
+        .add_system(level_end::level_end_system())
         .build()
 }

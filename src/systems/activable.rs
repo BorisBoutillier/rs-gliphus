@@ -1,5 +1,6 @@
 use crate::components::{Activable, ActivationKind, Position, Renderable};
 use crate::map;
+use bracket_lib::prelude::*;
 use legion::prelude::*;
 
 pub fn activable_system() -> Box<dyn Schedulable> {
@@ -17,9 +18,9 @@ pub fn activable_system() -> Box<dyn Schedulable> {
                     }
                 };
                 renderable.fg = if activable.active {
-                    rltk::RGB::named(rltk::GREEN)
+                    RGB::named(GREEN)
                 } else {
-                    rltk::RGB::named(rltk::RED)
+                    RGB::named(RED)
                 };
             }
         })

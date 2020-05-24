@@ -1,5 +1,5 @@
+use bracket_lib::prelude::*;
 use legion::prelude::*;
-use rltk;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Cardinal {
@@ -16,9 +16,9 @@ pub struct Position {
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Renderable {
-    pub glyph: rltk::FontCharType,
-    pub fg: rltk::RGB,
-    pub bg: rltk::RGB,
+    pub glyph: FontCharType,
+    pub fg: RGB,
+    pub bg: RGB,
     pub render_order: i32, // 0 will be in front, masking 1 which will masked 2 etc...
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +41,11 @@ pub struct Door {
     pub opened: bool,
     pub activations: Vec<Entity>,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Dead {}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct AtExit {}
 
 // Tags
 #[derive(Clone, Copy, Debug, PartialEq)]

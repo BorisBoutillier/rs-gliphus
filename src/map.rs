@@ -1,3 +1,9 @@
+use crate::{
+    components::{BlocksTile, Movable},
+    State,
+};
+use legion::prelude::*;
+
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
     Wall,
@@ -7,6 +13,7 @@ pub enum TileType {
 pub struct Map {
     tiles: Vec<TileType>,
     blocked_tiles: Vec<bool>,
+    content_tiles: Vec<Vec<Entity>>,
     pub width: i32,
     pub height: i32,
 }
@@ -15,6 +22,7 @@ impl Map {
         let mut map = Map {
             tiles: vec![TileType::Floor; (width * height) as usize],
             blocked_tiles: vec![false; (width * height) as usize],
+            content_tiles: vec![vec![]; (width * height) as usize],
             width,
             height,
         };
@@ -45,6 +53,27 @@ impl Map {
     pub fn is_blocked(&self, x: i32, y: i32) -> bool {
         let idx = self.xy_idx(x, y);
         self.blocked_tiles[idx]
+    }
+    pub fn reset_content(&mut self) {
+        for content in self.content_tiles.iter_mut() {
+            content.clear();
+        }
+    }
+    pub fn add_content(&mut self, x: i32, y: i32, entity: Entity) {
+        let idx = self.xy_idx(x, y);
+        self.content_tiles[idx].push(entity);
+    }
+    /// Among the entities on the tile, the return the one that is BlocksTile and Movable if it exists.
+    pub fn movable(&self, x: i32, y: i32, gs: &State) -> Option<Entity> {
+        let idx = self.xy_idx(x, y);
+        for &entity in self.content_tiles[idx].iter() {
+            if gs.ecs.get_tag::<BlocksTile>(entity).is_some()
+                && gs.ecs.get_tag::<Movable>(entity).is_some()
+            {
+                return Some(entity);
+            }
+        }
+        None
     }
     #[inline]
     fn xy_idx(&self, x: i32, y: i32) -> usize {

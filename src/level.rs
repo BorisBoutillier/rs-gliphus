@@ -1,6 +1,8 @@
 use super::State;
 use crate::{
-    components::{Activable, ActivationKind, BlocksTile, Door, Exit, Player, Position, Renderable},
+    components::{
+        Activable, ActivationKind, BlocksTile, Door, Exit, Movable, Player, Position, Renderable,
+    },
     map,
 };
 
@@ -17,6 +19,18 @@ pub fn load_level(gs: &mut State) {
                 fg: rltk::RGB::named(rltk::YELLOW),
                 bg: rltk::RGB::named(rltk::BLACK),
                 render_order: 0,
+            },
+        )],
+    );
+    gs.ecs.insert(
+        (BlocksTile {}, Movable {}),
+        vec![(
+            Position { x: 6, y: 7 },
+            Renderable {
+                glyph: 0xDB,
+                fg: rltk::RGB::named(rltk::ORANGE),
+                bg: rltk::RGB::named(rltk::BLACK),
+                render_order: 1,
             },
         )],
     );

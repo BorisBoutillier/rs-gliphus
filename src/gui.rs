@@ -1,11 +1,11 @@
-use crate::{map, RunState, State};
+use crate::{map, RunState, State, TERM_HEIGHT, TERM_WIDTH};
 use bracket_lib::prelude::*;
 
 pub fn draw_dead(gs: &State, ctx: &mut BTerm) {
     let map = gs.rsrc.get::<map::Map>().unwrap();
     let txt = "You died !";
-    let start_x = (80 - (txt.len() + 4)) / 2;
-    let start_y = (50 - map.height) / 2 - 6;
+    let start_x = (TERM_WIDTH - (txt.len() as i32 + 4)) / 2;
+    let start_y = (TERM_HEIGHT - map.height) / 2 - 6;
     ctx.draw_box(
         start_x,
         start_y,
@@ -15,7 +15,7 @@ pub fn draw_dead(gs: &State, ctx: &mut BTerm) {
         RGB::named(BLACK),
     );
     ctx.print_color(
-        (80 - txt.len()) / 2,
+        (TERM_WIDTH - txt.len() as i32) / 2,
         start_y + 1,
         RGB::named(RED1),
         RGB::named(BLACK),
@@ -23,7 +23,7 @@ pub fn draw_dead(gs: &State, ctx: &mut BTerm) {
     );
     let txt = "<ENTER to go to the menu>";
     ctx.print_color(
-        (80 - txt.len()) / 2,
+        (TERM_WIDTH - txt.len() as i32) / 2,
         start_y + 4,
         RGB::named(WHITE),
         RGB::named(BLACK),
@@ -32,8 +32,8 @@ pub fn draw_dead(gs: &State, ctx: &mut BTerm) {
 }
 pub fn draw_menu(ctx: &mut BTerm) {
     let txt = "PRESS ENTER TO PLAY";
-    let start_x = (80 - (txt.len() + 4)) / 2;
-    let start_y = (50 - 3) / 2;
+    let start_x = (TERM_WIDTH - (txt.len() as i32 + 4)) / 2;
+    let start_y = (TERM_HEIGHT - 3) / 2;
     ctx.draw_box(
         start_x,
         start_y,
@@ -43,7 +43,7 @@ pub fn draw_menu(ctx: &mut BTerm) {
         RGB::named(BLACK),
     );
     ctx.print_color(
-        (80 - txt.len()) / 2,
+        (TERM_WIDTH - txt.len() as i32) / 2,
         start_y + 1,
         RGB::named(YELLOW),
         RGB::named(BLACK),
@@ -53,8 +53,8 @@ pub fn draw_menu(ctx: &mut BTerm) {
 pub fn draw_level_solved(gs: &State, ctx: &mut BTerm) {
     let map = gs.rsrc.get::<map::Map>().unwrap();
     let txt = "Level solved !";
-    let start_x = (80 - (txt.len() + 4)) / 2;
-    let start_y = (50 - map.height) / 2 - 6;
+    let start_x = (TERM_WIDTH - (txt.len() as i32 + 4)) / 2;
+    let start_y = (TERM_HEIGHT - map.height) / 2 - 6;
     ctx.draw_box(
         start_x,
         start_y,
@@ -64,7 +64,7 @@ pub fn draw_level_solved(gs: &State, ctx: &mut BTerm) {
         RGB::named(BLACK),
     );
     ctx.print_color(
-        (80 - txt.len()) / 2,
+        (TERM_WIDTH - txt.len() as i32) / 2,
         start_y + 1,
         RGB::named(PINK),
         RGB::named(BLACK),
@@ -72,7 +72,7 @@ pub fn draw_level_solved(gs: &State, ctx: &mut BTerm) {
     );
     let txt = "<ENTER to go to next level>";
     ctx.print_color(
-        (80 - txt.len()) / 2,
+        (TERM_WIDTH - txt.len() as i32) / 2,
         start_y + 4,
         RGB::named(WHITE),
         RGB::named(BLACK),

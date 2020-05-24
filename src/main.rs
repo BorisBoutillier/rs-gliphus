@@ -9,6 +9,9 @@ mod map;
 mod player;
 mod systems;
 
+pub const TERM_WIDTH: i32 = 40;
+pub const TERM_HEIGHT: i32 = 30;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RunState {
     Menu,
@@ -97,8 +100,8 @@ impl State {
     }
     fn draw_game(&self, ctx: &mut BTerm) {
         let map = self.rsrc.get::<map::Map>().unwrap();
-        let start_x = (80 - map.width) / 2;
-        let start_y = (50 - map.height) / 2;
+        let start_x = (TERM_WIDTH - map.width) / 2;
+        let start_y = (TERM_HEIGHT - map.height) / 2;
         map.draw(ctx, start_x, start_y);
         let mut data = <(Read<Position>, Read<Renderable>)>::query()
             .iter(&self.ecs)
@@ -117,7 +120,9 @@ impl State {
 }
 
 fn main() -> BError {
-    let context = BTermBuilder::simple80x50().with_title("Griphus").build()?;
+    let context = BTermBuilder::simple(TERM_WIDTH, TERM_HEIGHT)?
+        .with_title("Griphus")
+        .build()?;
     let mut gs = State::new();
     gs.rsrc.insert(RunState::Menu);
     gs.rsrc.insert(map::Map::empty());

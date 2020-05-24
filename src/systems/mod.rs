@@ -7,6 +7,8 @@ mod map_indexing;
 
 pub fn build_systems() -> Schedule {
     Schedule::builder()
+        .add_system(laser::reflector_actuation_system())
+        .flush() // Following system need the object state to be up to date
         .add_system(map_indexing::map_indexing_system())
         .add_system(laser::laser_system())
         .flush() // Following system need the map up to date

@@ -1,11 +1,12 @@
 use crate::{
-    components::{BlocksLaser, BlocksTile, Cardinal, Movable},
+    components::{BlocksLaser, BlocksTile, Cardinal, Movable, ReflectsLaser},
     glyphs::*,
     State,
 };
 use bracket_lib::prelude::*;
 use legion::prelude::*;
 use legion::systems::SubWorld;
+use std::slice::Iter;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
@@ -69,6 +70,7 @@ impl Map {
         let direction = match direction {
             Cardinal::N | Cardinal::S => Cardinal::N,
             Cardinal::E | Cardinal::W => Cardinal::E,
+            _ => panic!("Lasert should be only N,S,E,W"),
         };
         let idx = self.xy_idx(x, y);
         if !self.lasered_tiles[idx].contains(&direction) {
@@ -104,6 +106,15 @@ impl Map {
         }
         false
     }
+    pub fn is_reflecting_laser(&self, x: i32, y: i32, ecs: &SubWorld) -> Option<Cardinal> {
+        let idx = self.xy_idx(x, y);
+        for &entity in self.content_tiles[idx].iter() {
+            if let Some(reflector) = ecs.get_component::<ReflectsLaser>(entity) {
+                return Some(reflector.orientation);
+            }
+        }
+        None
+    }
     pub fn reset_content(&mut self) {
         for content in self.content_tiles.iter_mut() {
             content.clear();
@@ -112,6 +123,10 @@ impl Map {
     pub fn add_content(&mut self, x: i32, y: i32, entity: Entity) {
         let idx = self.xy_idx(x, y);
         self.content_tiles[idx].push(entity);
+    }
+    pub fn iter_content(&self, x: i32, y: i32) -> Iter<Entity> {
+        let idx = self.xy_idx(x, y);
+        self.content_tiles[idx].iter()
     }
     /// Among the entities on the tile, the return the one that is BlocksTile and Movable if it exists.
     pub fn movable(&self, x: i32, y: i32, gs: &State) -> Option<Entity> {

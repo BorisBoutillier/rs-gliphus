@@ -1,5 +1,5 @@
 use super::State;
-use crate::components::{Player, Position};
+use crate::components::{Actuated, Actuator, Player, Position};
 use crate::map;
 use crate::RunState;
 use bracket_lib::prelude::*;
@@ -29,6 +29,23 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, gs: &mut State) {
         pos.y = y;
     }
 }
+fn try_actuate(gs: &mut State) {
+    let query = <(Read<Position>,)>::query().filter(tag::<Player>());
+    let map = gs.rsrc.get::<map::Map>().unwrap();
+    let mut to_actuate = vec![];
+    for (pos,) in query.iter(&gs.ecs) {
+        for (delta_x, delta_y) in vec![(0, 1), (0, -1), (1, 0), (-1, 0)].iter() {
+            for &entity in map.iter_content(pos.x + delta_x, pos.y + delta_y) {
+                if gs.ecs.get_tag::<Actuator>(entity).is_some() {
+                    to_actuate.push(entity);
+                }
+            }
+        }
+    }
+    for entity in to_actuate.iter() {
+        gs.ecs.add_tag(*entity, Actuated {}).unwrap();
+    }
+}
 
 pub fn game_turn_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
     match ctx.key {
@@ -40,6 +57,7 @@ pub fn game_turn_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
             VirtualKeyCode::Right => try_move_player(1, 0, gs),
             VirtualKeyCode::Up => try_move_player(0, -1, gs),
             VirtualKeyCode::Down => try_move_player(0, 1, gs),
+            VirtualKeyCode::Space => try_actuate(gs),
             VirtualKeyCode::Escape => return RunState::Menu,
             _ => {
                 return RunState::GameAwaitingInput;

@@ -7,8 +7,11 @@ pub enum Cardinal {
     S,
     E,
     W,
+    NE,
+    NW,
+    SE,
+    SW,
 }
-// Components
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Position {
     pub x: i32,
@@ -20,10 +23,6 @@ pub struct Renderable {
     pub fg: RGB,
     pub bg: RGB,
     pub render_order: i32, // 0 will be in front, masking 1 which will masked 2 etc...
-}
-#[derive(Clone, Debug, PartialEq)]
-pub struct Laser {
-    pub direction: Cardinal,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ActivationKind {
@@ -42,18 +41,33 @@ pub struct Door {
     pub activations: Vec<Entity>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReflectsLaser {
+    /// Direction the reflector is orientied: one of NEor NW
+    pub orientation: Cardinal,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Dead {}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AtExit {}
 
-// Tags
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Player {}
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Laser {
+    /// Direction the laser is firing at : one of N,S,E,W
+    pub direction: Cardinal,
+}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BlocksTile {}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BlocksLaser {}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Movable {}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Actuator {}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Actuated {}

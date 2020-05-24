@@ -1,9 +1,10 @@
 use crate::{
-    components::{BlocksTile, Movable},
+    components::{BlocksLaser, BlocksTile, Cardinal, Movable},
     glyphs::*,
     State,
 };
 use legion::prelude::*;
+use legion::systems::SubWorld;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
@@ -15,6 +16,7 @@ pub struct Map {
     tiles: Vec<TileType>,
     blocked_tiles: Vec<bool>,
     content_tiles: Vec<Vec<Entity>>,
+    lasered_tiles: Vec<Vec<Cardinal>>,
     pub width: i32,
     pub height: i32,
 }
@@ -24,6 +26,7 @@ impl Map {
             tiles: vec![TileType::Floor; (width * height) as usize],
             blocked_tiles: vec![false; (width * height) as usize],
             content_tiles: vec![vec![]; (width * height) as usize],
+            lasered_tiles: vec![vec![]; (width * height) as usize],
             width,
             height,
         };
@@ -42,6 +45,25 @@ impl Map {
         let idx = self.xy_idx(x, y);
         self.tiles[idx] = tiletype;
     }
+    pub fn reset_lasered(&mut self) {
+        for lasered_tile in self.lasered_tiles.iter_mut() {
+            lasered_tile.clear();
+        }
+    }
+    pub fn set_lasered(&mut self, x: i32, y: i32, direction: Cardinal) {
+        let direction = match direction {
+            Cardinal::N | Cardinal::S => Cardinal::N,
+            Cardinal::E | Cardinal::W => Cardinal::E,
+        };
+        let idx = self.xy_idx(x, y);
+        if !self.lasered_tiles[idx].contains(&direction) {
+            self.lasered_tiles[idx].push(direction);
+        }
+    }
+    pub fn is_lasered(&self, x: i32, y: i32) -> bool {
+        let idx = self.xy_idx(x, y);
+        self.lasered_tiles[idx].len() != 0
+    }
     pub fn reset_blocked(&mut self) {
         for (idx, blocked_tile) in self.blocked_tiles.iter_mut().enumerate() {
             *blocked_tile = self.tiles[idx] == TileType::Wall;
@@ -54,6 +76,18 @@ impl Map {
     pub fn is_blocked(&self, x: i32, y: i32) -> bool {
         let idx = self.xy_idx(x, y);
         self.blocked_tiles[idx]
+    }
+    pub fn is_blocking_laser(&self, x: i32, y: i32, ecs: &SubWorld) -> bool {
+        let idx = self.xy_idx(x, y);
+        if self.tiles[idx] == TileType::Wall {
+            return true;
+        }
+        for &entity in self.content_tiles[idx].iter() {
+            if ecs.get_tag::<BlocksLaser>(entity).is_some() {
+                return true;
+            }
+        }
+        false
     }
     pub fn reset_content(&mut self) {
         for content in self.content_tiles.iter_mut() {
@@ -90,7 +124,18 @@ impl Map {
             // Render a tile depending upon the tile type
             match tile {
                 TileType::Floor => {
-                    ctx.set(start_x + x, start_y + y, rltk::GRAY, rltk::BLACK, FLOOR);
+                    let glyph = if self.lasered_tiles[idx].contains(&Cardinal::N) {
+                        if self.lasered_tiles[idx].contains(&Cardinal::E) {
+                            LASERED_NS_EW
+                        } else {
+                            LASERED_NS
+                        }
+                    } else if self.lasered_tiles[idx].contains(&Cardinal::E) {
+                        LASERED_EW
+                    } else {
+                        FLOOR
+                    };
+                    ctx.set(start_x + x, start_y + y, rltk::GRAY, rltk::BLACK, glyph);
                 }
                 TileType::Wall => {
                     ctx.set(

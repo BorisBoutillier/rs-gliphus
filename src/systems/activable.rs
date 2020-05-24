@@ -3,7 +3,7 @@ use crate::map;
 use legion::prelude::*;
 
 pub fn activable_system() -> Box<dyn Schedulable> {
-    SystemBuilder::new("map_indexing_system")
+    SystemBuilder::new("activable_system")
         .read_resource::<map::Map>()
         .with_query(<(Write<Activable>, Write<Renderable>, Read<Position>)>::query())
         .build(|_, mut world, map, query| {
@@ -13,7 +13,7 @@ pub fn activable_system() -> Box<dyn Schedulable> {
                         activable.active = map.is_blocked(position.x, position.y);
                     }
                     ActivationKind::Laser => {
-                        activable.active = false;
+                        activable.active = map.is_lasered(position.x, position.y);
                     }
                 };
                 renderable.fg = if activable.active {

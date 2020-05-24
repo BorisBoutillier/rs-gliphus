@@ -1,5 +1,13 @@
 use legion::prelude::*;
 use rltk;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Cardinal {
+    N,
+    S,
+    E,
+    W,
+}
 // Components
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Position {
@@ -12,6 +20,10 @@ pub struct Renderable {
     pub fg: rltk::RGB,
     pub bg: rltk::RGB,
     pub render_order: i32, // 0 will be in front, masking 1 which will masked 2 etc...
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct Laser {
+    pub direction: Cardinal,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ActivationKind {
@@ -36,5 +48,7 @@ pub struct Player {}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BlocksTile {}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BlocksLaser {}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Movable {}

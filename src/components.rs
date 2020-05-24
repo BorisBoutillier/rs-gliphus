@@ -35,9 +35,6 @@ pub struct Door {
 pub struct Player {}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Exit {}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BlocksTile {}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Movable {}

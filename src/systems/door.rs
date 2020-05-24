@@ -1,4 +1,5 @@
 use crate::components::{Activable, Door, Renderable};
+use crate::glyphs::*;
 use crate::map;
 use legion::prelude::*;
 
@@ -25,7 +26,7 @@ pub fn door_system() -> Box<dyn Schedulable> {
                     cmd.add_component::<Renderable>(
                         entity,
                         Renderable {
-                            glyph: rltk::to_cp437('D'),
+                            glyph: DOOR_H_CLOSED,
                             fg: rltk::RGB::named(rltk::RED),
                             bg: rltk::RGB::named(rltk::BLACK),
                             render_order: 1,

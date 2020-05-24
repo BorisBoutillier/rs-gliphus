@@ -1,7 +1,8 @@
 use super::State;
+use crate::glyphs::*;
 use crate::{
     components::{
-        Activable, ActivationKind, BlocksTile, Door, Exit, Movable, Player, Position, Renderable,
+        Activable, ActivationKind, BlocksTile, Door, Movable, Player, Position, Renderable,
     },
     map,
 };
@@ -15,7 +16,7 @@ pub fn load_level(gs: &mut State) {
         vec![(
             Position { x: 5, y: 5 },
             Renderable {
-                glyph: rltk::to_cp437('@'),
+                glyph: PLAYER,
                 fg: rltk::RGB::named(rltk::YELLOW),
                 bg: rltk::RGB::named(rltk::BLACK),
                 render_order: 0,
@@ -27,7 +28,7 @@ pub fn load_level(gs: &mut State) {
         vec![(
             Position { x: 6, y: 7 },
             Renderable {
-                glyph: 0xDB,
+                glyph: MOVABLE_BLOCK,
                 fg: rltk::RGB::named(rltk::ORANGE),
                 bg: rltk::RGB::named(rltk::BLACK),
                 render_order: 1,
@@ -43,7 +44,7 @@ pub fn load_level(gs: &mut State) {
                 kind: ActivationKind::Weight,
             },
             Renderable {
-                glyph: rltk::to_cp437('x'),
+                glyph: WEIGHT_PLATE,
                 fg: rltk::RGB::named(rltk::RED),
                 bg: rltk::RGB::named(rltk::BLACK),
                 render_order: 2,
@@ -52,7 +53,7 @@ pub fn load_level(gs: &mut State) {
     )[0]
     .clone();
     gs.ecs.insert(
-        (Exit {},),
+        (),
         vec![(
             Position { x: 5, y: 0 },
             Door {
@@ -60,7 +61,7 @@ pub fn load_level(gs: &mut State) {
                 activations: vec![weight_plate],
             },
             Renderable {
-                glyph: rltk::to_cp437('D'),
+                glyph: DOOR_H_CLOSED,
                 fg: rltk::RGB::named(rltk::RED),
                 bg: rltk::RGB::named(rltk::BLACK),
                 render_order: 1,

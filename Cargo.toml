@@ -1,10 +1,11 @@
 [package]
-name = "rs-laseration"
+name = "rs-griphus"
 version = "0.1.0"
 authors = ["Boris Boutillier <boris.boutillier@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 rltk = { version = "*" }
+bracket-lib = "*"
 legion = { git = "https://github.com/TomGillen/legion" }
 tracing-subscriber = "*"

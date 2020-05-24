@@ -1432,9 +1432,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "rs-laseration"
+name = "rs-griphus"
 version = "0.1.0"
 dependencies = [
+ "bracket-lib",
  "legion",
  "rltk",
  "tracing-subscriber",

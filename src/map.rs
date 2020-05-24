@@ -1,5 +1,6 @@
 use crate::{
     components::{BlocksTile, Movable},
+    glyphs::*,
     State,
 };
 use legion::prelude::*;
@@ -89,13 +90,7 @@ impl Map {
             // Render a tile depending upon the tile type
             match tile {
                 TileType::Floor => {
-                    ctx.set(
-                        start_x + x,
-                        start_y + y,
-                        rltk::GRAY,
-                        rltk::BLACK,
-                        rltk::to_cp437('.'),
-                    );
+                    ctx.set(start_x + x, start_y + y, rltk::GRAY, rltk::BLACK, FLOOR);
                 }
                 TileType::Wall => {
                     ctx.set(
@@ -103,17 +98,11 @@ impl Map {
                         start_y + y,
                         rltk::BLUE_VIOLET,
                         rltk::BLACK,
-                        rltk::to_cp437('#'),
+                        WALL,
                     );
                 }
                 TileType::Exit => {
-                    ctx.set(
-                        start_x + x,
-                        start_y + y,
-                        rltk::CYAN,
-                        rltk::BLACK,
-                        rltk::to_cp437('o'),
-                    );
+                    ctx.set(start_x + x, start_y + y, rltk::CYAN, rltk::BLACK, EXIT);
                 }
             }
         }

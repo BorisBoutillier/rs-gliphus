@@ -2,6 +2,7 @@ use legion::prelude::*;
 use rltk::{GameState, Rltk};
 mod components;
 use components::{Position, Renderable};
+mod glyphs;
 mod level;
 mod map;
 mod player;
@@ -54,7 +55,7 @@ impl State {
 
 fn main() -> rltk::BError {
     let context = rltk::RltkBuilder::simple80x50()
-        .with_title("Laseration")
+        .with_title("Griphus")
         .build()?;
     let mut gs = State::new();
     level::load_level(&mut gs);

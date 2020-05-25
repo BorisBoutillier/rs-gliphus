@@ -37,7 +37,7 @@ impl GameState for State {
                 newrunstate = gui::menu_input(self, ctx);
             }
             RunState::LoadLevel => {
-                level::load_level(self, 2);
+                level::load_level(self, 0);
                 ctx.cls();
                 self.draw_game(ctx);
                 self.run_game_systems();

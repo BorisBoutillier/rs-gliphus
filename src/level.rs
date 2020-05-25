@@ -8,24 +8,79 @@ use crate::{
     map,
 };
 use bracket_lib::prelude::*;
+use legion::prelude::*;
+use map::TileType;
+use std::fs;
 
 pub fn load_level(gs: &mut State, id: u64) {
     match id {
-        1 => load_level_1(gs),
-        _ => load_level_2(gs),
+        _ => load_level_from_file("resources/level_000.txt", gs),
     }
 }
 
-pub fn load_level_1(gs: &mut State) {
+fn load_level_from_file(file: &str, gs: &mut State) {
+    let content = fs::read_to_string(file).unwrap();
+    let lines = content.trim().split("\n").collect::<Vec<_>>();
+    let height = lines.len();
+    let width = lines[0].len();
     gs.ecs.delete_all();
-    let mut map = map::Map::new(10, 10);
-    map.set_tiletype(5, 0, map::TileType::Exit);
-    gs.ecs.delete_all();
+    let mut map = map::Map::new(width as i32, height as i32);
+    let mut activations = vec![];
+    let mut exit = (0, 0);
+    for y in 0..height {
+        for (x, c) in lines[y].chars().enumerate() {
+            let x = x as i32;
+            let y = y as i32;
+            match c {
+                '#' => map.set_tiletype(x, y, TileType::Wall),
+                '.' => map.set_tiletype(x, y, TileType::Floor),
+                'E' => {
+                    map.set_tiletype(x, y, TileType::Exit);
+                    exit = (x, y);
+                }
+                'e' => {
+                    spawn_laser(gs, x, y, Cardinal::E);
+                }
+                'n' => {
+                    spawn_laser(gs, x, y, Cardinal::N);
+                }
+                's' => {
+                    spawn_laser(gs, x, y, Cardinal::S);
+                }
+                'w' => {
+                    spawn_laser(gs, x, y, Cardinal::W);
+                }
+                '/' => {
+                    spawn_laser_reflector(gs, x, y, Cardinal::NE);
+                }
+                '\\' => {
+                    spawn_laser_reflector(gs, x, y, Cardinal::NW);
+                }
+                'x' => {
+                    activations.push(spawn_weight_plate(gs, x, y));
+                }
+                'o' => {
+                    activations.push(spawn_laser_receptor(gs, x, y));
+                }
+                'b' => {
+                    spawn_block(gs, x, y);
+                }
+                '@' => {
+                    spawn_player(gs, x, y);
+                }
+                x => println!("Unused {}", x),
+            }
+        }
+    }
+    spawn_door(gs, exit.0, exit.1, activations);
     gs.rsrc.insert(map);
+}
+
+fn spawn_player(gs: &mut State, x: i32, y: i32) -> Entity {
     gs.ecs.insert(
         (Player {}, BlocksTile {}),
         vec![(
-            Position { x: 5, y: 5 },
+            Position { x, y },
             Renderable {
                 glyph: PLAYER,
                 fg: RGB::named(YELLOW),
@@ -33,11 +88,39 @@ pub fn load_level_1(gs: &mut State) {
                 render_order: 0,
             },
         )],
-    );
+    )[0]
+}
+
+fn spawn_laser(gs: &mut State, x: i32, y: i32, direction: Cardinal) -> Entity {
+    gs.ecs.insert(
+        (
+            Laser { direction },
+            BlocksTile {},
+            BlocksLaser {},
+            Movable {},
+        ),
+        vec![(
+            Position { x, y },
+            Renderable {
+                glyph: match direction {
+                    Cardinal::N => LASER_N,
+                    Cardinal::E => LASER_E,
+                    Cardinal::W => LASER_W,
+                    _ => LASER_S,
+                },
+                fg: RGB::named(LIGHT_BLUE),
+                bg: RGB::named(BLACK),
+                render_order: 1,
+            },
+        )],
+    )[0]
+}
+
+fn spawn_block(gs: &mut State, x: i32, y: i32) -> Entity {
     gs.ecs.insert(
         (BlocksTile {}, Movable {}, BlocksLaser {}),
         vec![(
-            Position { x: 6, y: 7 },
+            Position { x, y },
             Renderable {
                 glyph: MOVABLE_BLOCK,
                 fg: RGB::named(ORANGE),
@@ -45,11 +128,14 @@ pub fn load_level_1(gs: &mut State) {
                 render_order: 1,
             },
         )],
-    );
-    let weight_plate = gs.ecs.insert(
+    )[0]
+}
+
+fn spawn_weight_plate(gs: &mut State, x: i32, y: i32) -> Entity {
+    gs.ecs.insert(
         (),
         vec![(
-            Position { x: 2, y: 7 },
+            Position { x, y },
             Activable {
                 active: false,
                 kind: ActivationKind::Weight,
@@ -62,136 +148,34 @@ pub fn load_level_1(gs: &mut State) {
             },
         )],
     )[0]
-    .clone();
-    let laser_receptors = gs.ecs.insert(
-        (BlocksTile {}, BlocksLaser {}),
-        vec![
-            (
-                Position { x: 7, y: 2 },
-                Activable {
-                    active: false,
-                    kind: ActivationKind::Laser,
-                },
-                Renderable {
-                    glyph: LASER_RECEPTOR,
-                    fg: RGB::named(ORANGE),
-                    bg: RGB::named(BLACK),
-                    render_order: 2,
-                },
-            ),
-            (
-                Position { x: 8, y: 5 },
-                Activable {
-                    active: false,
-                    kind: ActivationKind::Laser,
-                },
-                Renderable {
-                    glyph: LASER_RECEPTOR,
-                    fg: RGB::named(ORANGE),
-                    bg: RGB::named(BLACK),
-                    render_order: 2,
-                },
-            ),
-        ],
-    );
-    let laser_receptors = vec![laser_receptors[0].clone(), laser_receptors[1].clone()];
-    gs.ecs.insert(
-        (BlocksLaser {},),
-        vec![(
-            Position { x: 5, y: 0 },
-            Door {
-                opened: false,
-                activations: vec![weight_plate, laser_receptors[0], laser_receptors[1]],
-            },
-            Renderable {
-                glyph: DOOR_H_CLOSED,
-                fg: RGB::named(RED),
-                bg: RGB::named(BLACK),
-                render_order: 1,
-            },
-        )],
-    );
-    gs.ecs.insert(
-        (
-            Laser {
-                direction: Cardinal::N,
-            },
-            BlocksTile {},
-            BlocksLaser {},
-            Movable {},
-        ),
-        vec![(
-            Position { x: 7, y: 8 },
-            Renderable {
-                glyph: LASER_N,
-                fg: RGB::named(LIGHT_BLUE),
-                bg: RGB::named(BLACK),
-                render_order: 1,
-            },
-        )],
-    );
-    gs.ecs.insert(
-        (
-            Laser {
-                direction: Cardinal::E,
-            },
-            BlocksTile {},
-            BlocksLaser {},
-            Movable {},
-        ),
-        vec![(
-            Position { x: 3, y: 4 },
-            Renderable {
-                glyph: LASER_E,
-                fg: RGB::named(LIGHT_BLUE),
-                bg: RGB::named(BLACK),
-                render_order: 1,
-            },
-        )],
-    );
 }
-
-pub fn load_level_2(gs: &mut State) {
-    gs.ecs.delete_all();
-    let mut map = map::Map::new(15, 15);
-    map.set_tiletype(5, 0, map::TileType::Exit);
-    gs.rsrc.insert(map);
+fn spawn_laser_receptor(gs: &mut State, x: i32, y: i32) -> Entity {
     gs.ecs.insert(
-        (Player {}, BlocksTile {}),
+        (BlocksTile {}, BlocksLaser {}),
         vec![(
-            Position { x: 5, y: 5 },
-            Renderable {
-                glyph: PLAYER,
-                fg: RGB::named(YELLOW),
-                bg: RGB::named(BLACK),
-                render_order: 0,
-            },
-        )],
-    );
-    let laser_receptor = gs.ecs.insert(
-        (BlocksLaser {},),
-        vec![(
-            Position { x: 7, y: 2 },
+            Position { x, y },
             Activable {
                 active: false,
                 kind: ActivationKind::Laser,
             },
             Renderable {
                 glyph: LASER_RECEPTOR,
-                fg: RGB::named(RED),
+                fg: RGB::named(ORANGE),
                 bg: RGB::named(BLACK),
                 render_order: 2,
             },
         )],
     )[0]
-    .clone();
+}
+
+fn spawn_door(gs: &mut State, x: i32, y: i32, activations: Vec<Entity>) -> Entity {
     gs.ecs.insert(
         (BlocksLaser {},),
         vec![(
-            Position { x: 5, y: 0 },
+            Position { x, y },
             Door {
                 opened: false,
-                activations: vec![laser_receptor],
+                activations: activations,
             },
             Renderable {
                 glyph: DOOR_H_CLOSED,
@@ -200,38 +184,27 @@ pub fn load_level_2(gs: &mut State) {
                 render_order: 1,
             },
         )],
-    );
+    )[0]
+}
+
+fn spawn_laser_reflector(gs: &mut State, x: i32, y: i32, orientation: Cardinal) -> Entity {
     gs.ecs.insert(
         (BlocksTile {}, Movable {}, Actuator {}),
         vec![(
-            Position { x: 10, y: 10 },
+            Position { x, y },
             Renderable {
-                glyph: REFLECTOR_NE,
+                glyph: if orientation == Cardinal::NE {
+                    REFLECTOR_NE
+                } else {
+                    REFLECTOR_NW
+                },
                 fg: RGB::named(WHITE),
                 bg: RGB::named(BLACK),
                 render_order: 1,
             },
             ReflectsLaser {
-                orientation: Cardinal::NE,
+                orientation: orientation,
             },
         )],
-    );
-    gs.ecs.insert(
-        (
-            Laser {
-                direction: Cardinal::N,
-            },
-            BlocksTile {},
-            BlocksLaser {},
-        ),
-        vec![(
-            Position { x: 2, y: 14 },
-            Renderable {
-                glyph: LASER_N,
-                fg: RGB::named(LIGHT_BLUE),
-                bg: RGB::named(BLACK),
-                render_order: 1,
-            },
-        )],
-    );
+    )[0]
 }

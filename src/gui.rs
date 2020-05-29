@@ -1,4 +1,4 @@
-use crate::{map, RunState, State, TERM_HEIGHT, TERM_WIDTH};
+use crate::{map, turn_history::TurnsHistory, RunState, State, TERM_HEIGHT, TERM_WIDTH};
 use bracket_lib::prelude::*;
 
 pub fn draw_dead(gs: &State, ctx: &mut BTerm) {
@@ -80,20 +80,28 @@ pub fn draw_level_solved(gs: &State, ctx: &mut BTerm) {
     );
 }
 
-pub fn game_end_dead_input(_gs: &State, ctx: &mut BTerm) -> RunState {
+pub fn game_end_dead_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
     match ctx.key {
         None => RunState::GameEndDead,
         Some(key) => match key {
             VirtualKeyCode::Return => RunState::Menu,
+            VirtualKeyCode::Back => {
+                let mut turn_history = gs.rsrc.get_mut::<TurnsHistory>().unwrap();
+                turn_history.undo_last_turn(&mut gs.ecs);
+                RunState::GameAwaitingInput
+            }
             _ => RunState::GameEndDead,
         },
     }
 }
-pub fn game_level_end_input(_gs: &State, ctx: &mut BTerm) -> RunState {
+pub fn game_level_end_input(gs: &State, ctx: &mut BTerm) -> RunState {
     match ctx.key {
         None => RunState::GameLevelEnd,
         Some(key) => match key {
-            VirtualKeyCode::Return => RunState::LoadLevel,
+            VirtualKeyCode::Return => {
+                let map = gs.rsrc.get::<map::Map>().unwrap();
+                RunState::LoadLevel(map.level + 1)
+            }
             _ => RunState::GameLevelEnd,
         },
     }
@@ -102,7 +110,7 @@ pub fn menu_input(_gs: &State, ctx: &mut BTerm) -> RunState {
     match ctx.key {
         None => RunState::Menu,
         Some(key) => match key {
-            VirtualKeyCode::Return => RunState::LoadLevel,
+            VirtualKeyCode::Return => RunState::LoadLevel(0),
             _ => RunState::Menu,
         },
     }

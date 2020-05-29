@@ -6,25 +6,27 @@ use crate::{
         Movable, Player, Position, ReflectsLaser, Renderable,
     },
     map,
+    turn_history::TurnsHistory,
 };
 use bracket_lib::prelude::*;
 use legion::prelude::*;
 use map::TileType;
 use std::fs;
 
-pub fn load_level(gs: &mut State, id: u64) {
-    match id {
-        _ => load_level_from_file("resources/level_000.txt", gs),
+pub fn load_level(gs: &mut State, level: u64) {
+    match level {
+        x if x <= 2 => load_level_from_file(level, &format!("resources/level_00{}.txt", level), gs),
+        _ => load_level_from_file(level, "resources/level_end.txt", gs),
     }
 }
 
-fn load_level_from_file(file: &str, gs: &mut State) {
+fn load_level_from_file(level: u64, file: &str, gs: &mut State) {
     let content = fs::read_to_string(file).unwrap();
     let lines = content.trim().split("\n").collect::<Vec<_>>();
     let height = lines.len();
     let width = lines[0].len();
     gs.ecs.delete_all();
-    let mut map = map::Map::new(width as i32, height as i32);
+    let mut map = map::Map::new(level, width as i32, height as i32);
     let mut activations = vec![];
     let mut exit = (0, 0);
     for y in 0..height {
@@ -74,6 +76,7 @@ fn load_level_from_file(file: &str, gs: &mut State) {
     }
     spawn_door(gs, exit.0, exit.1, activations);
     gs.rsrc.insert(map);
+    gs.rsrc.insert(TurnsHistory::new());
 }
 
 fn spawn_player(gs: &mut State, x: i32, y: i32) -> Entity {

@@ -1,68 +1,89 @@
 use super::State;
-use crate::components::{Actuated, Actuator, Player, Position};
+use crate::components::{Actuator, Player, Position};
 use crate::map;
-use crate::RunState;
+use crate::{
+    turn_history::{Action, TurnsHistory},
+    RunState,
+};
 use bracket_lib::prelude::*;
 use legion::prelude::*;
 
-pub fn try_move_player(delta_x: i32, delta_y: i32, gs: &mut State) {
+pub fn try_move_player(delta_x: i32, delta_y: i32, gs: &mut State) -> Vec<Action> {
     let query = <(Read<Position>,)>::query().filter(tag::<Player>());
     let map = gs.rsrc.get::<map::Map>().unwrap();
-    let mut to_move = vec![];
+    let mut actions = vec![];
     for (player_entity, (pos,)) in query.iter_entities(&gs.ecs) {
         let dest_x = (pos.x + delta_x).max(0).min(79);
         let dest_y = (pos.y + delta_y).max(0).min(49);
         if !map.is_blocked(dest_x, dest_y) {
-            to_move.push((player_entity, (dest_x, dest_y)));
+            actions.push(Action::Moves(
+                player_entity,
+                (pos.x, pos.y),
+                (dest_x, dest_y),
+            ));
         } else if let Some(movable_entity) = map.movable(dest_x, dest_y, &gs) {
             let moved_dest_x = dest_x + delta_x;
             let moved_dest_y = dest_y + delta_y;
             if !map.is_blocked(moved_dest_x, moved_dest_y) {
-                to_move.push((player_entity, (dest_x, dest_y)));
-                to_move.push((movable_entity, (moved_dest_x, moved_dest_y)));
+                actions.push(Action::Moves(
+                    player_entity,
+                    (pos.x, pos.y),
+                    (dest_x, dest_y),
+                ));
+                actions.push(Action::Moves(
+                    movable_entity,
+                    (dest_x, dest_y),
+                    (moved_dest_x, moved_dest_y),
+                ));
+                actions.push(Action::UseEnergy(1));
             }
         }
     }
-    for (entity, (x, y)) in to_move.into_iter() {
-        let mut pos = gs.ecs.get_component_mut::<Position>(entity).unwrap();
-        pos.x = x;
-        pos.y = y;
-    }
+    actions
 }
-fn try_actuate(gs: &mut State) {
+fn try_actuate(gs: &mut State) -> Vec<Action> {
     let query = <(Read<Position>,)>::query().filter(tag::<Player>());
     let map = gs.rsrc.get::<map::Map>().unwrap();
-    let mut to_actuate = vec![];
+    let mut actions = vec![];
     for (pos,) in query.iter(&gs.ecs) {
         for (delta_x, delta_y) in vec![(0, 1), (0, -1), (1, 0), (-1, 0)].iter() {
             for &entity in map.iter_content(pos.x + delta_x, pos.y + delta_y) {
                 if gs.ecs.get_tag::<Actuator>(entity).is_some() {
-                    to_actuate.push(entity);
+                    actions.push(Action::Actuates(entity));
+                    actions.push(Action::UseEnergy(1));
                 }
             }
         }
     }
-    for entity in to_actuate.iter() {
-        gs.ecs.add_tag(*entity, Actuated {}).unwrap();
-    }
+    actions
 }
 
 pub fn game_turn_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
+    let actions;
     match ctx.key {
         None => {
             return RunState::GameAwaitingInput;
         }
         Some(key) => match key {
-            VirtualKeyCode::Left => try_move_player(-1, 0, gs),
-            VirtualKeyCode::Right => try_move_player(1, 0, gs),
-            VirtualKeyCode::Up => try_move_player(0, -1, gs),
-            VirtualKeyCode::Down => try_move_player(0, 1, gs),
-            VirtualKeyCode::Space => try_actuate(gs),
+            VirtualKeyCode::Left => actions = try_move_player(-1, 0, gs),
+            VirtualKeyCode::Right => actions = try_move_player(1, 0, gs),
+            VirtualKeyCode::Up => actions = try_move_player(0, -1, gs),
+            VirtualKeyCode::Down => actions = try_move_player(0, 1, gs),
+            VirtualKeyCode::Space => actions = try_actuate(gs),
+            VirtualKeyCode::Back => {
+                let mut turn_history = gs.rsrc.get_mut::<TurnsHistory>().unwrap();
+                turn_history.undo_last_turn(&mut gs.ecs);
+                actions = vec![];
+            }
             VirtualKeyCode::Escape => return RunState::Menu,
             _ => {
                 return RunState::GameAwaitingInput;
             }
         },
+    }
+    if actions.len() > 0 {
+        let mut turn_history = gs.rsrc.get_mut::<TurnsHistory>().unwrap();
+        turn_history.play_turn(&mut gs.ecs, actions);
     }
     RunState::GameTurn
 }

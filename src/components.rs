@@ -46,12 +46,6 @@ pub struct ReflectsLaser {
     /// Direction the reflector is orientied: one of NEor NW
     pub orientation: Cardinal,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Dead {}
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct AtExit {}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Player {}
 
@@ -71,3 +65,5 @@ pub struct Movable {}
 pub struct Actuator {}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Actuated {}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UndoActuated {}

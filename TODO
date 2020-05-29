@@ -1,0 +1,7 @@
+. Check we can play random, for AI
+. Add tiles for floor and wall and exit.
+. At UI during game:
+    Level number
+    step and energy used.
+. Update draw to draw TileType on 0, Lasers on 1, objects on 2
+    using a drawbatch

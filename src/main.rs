@@ -1,13 +1,15 @@
 use bracket_lib::prelude::*;
 use legion::prelude::*;
 mod components;
-use components::{AtExit, Dead, Player, Position, Renderable};
+use components::{Position, Renderable};
+use turn_history::{TurnState, TurnsHistory};
 mod glyphs;
 mod gui;
 mod level;
 mod map;
 mod player;
 mod systems;
+mod turn_history;
 
 pub const TERM_WIDTH: i32 = 40;
 pub const TERM_HEIGHT: i32 = 30;
@@ -15,7 +17,7 @@ pub const TERM_HEIGHT: i32 = 30;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RunState {
     Menu,
-    LoadLevel,
+    LoadLevel(u64),
     GameAwaitingInput,
     GameTurn,
     GameEndDead,
@@ -36,8 +38,8 @@ impl GameState for State {
                 gui::draw_menu(ctx);
                 newrunstate = gui::menu_input(self, ctx);
             }
-            RunState::LoadLevel => {
-                level::load_level(self, 0);
+            RunState::LoadLevel(level) => {
+                level::load_level(self, level);
                 ctx.cls();
                 self.draw_game(ctx);
                 self.run_game_systems();
@@ -50,22 +52,11 @@ impl GameState for State {
             }
             RunState::GameTurn => {
                 self.run_game_systems();
-                let dead = <(Read<Position>,)>::query()
-                    .filter(tag::<Player>() & tag::<Dead>())
-                    .iter(&self.ecs)
-                    .count()
-                    > 0;
-                let solved = <(Read<Position>,)>::query()
-                    .filter(tag::<Player>() & tag::<AtExit>())
-                    .iter(&self.ecs)
-                    .count()
-                    > 0;
-                if dead {
-                    newrunstate = RunState::GameEndDead;
-                } else if solved {
-                    newrunstate = RunState::GameLevelEnd;
-                } else {
-                    newrunstate = RunState::GameAwaitingInput;
+                let history = self.rsrc.get::<TurnsHistory>().unwrap();
+                newrunstate = match history.state {
+                    TurnState::PlayerDead => RunState::GameEndDead,
+                    TurnState::PlayerAtExit => RunState::GameLevelEnd,
+                    TurnState::Running => RunState::GameAwaitingInput,
                 }
             }
             RunState::GameEndDead => {
@@ -119,10 +110,33 @@ impl State {
     }
 }
 
+//pub const TERM_BG_FONT: &str = "sm_16x16.png";
+pub const TERM_BG_FONT: &str = "Bisasam_16x16.png";
+pub const TERM_FG_FONT: &str = TERM_BG_FONT;
+pub const TERM_UI_FONT: &str = TERM_BG_FONT;
+//embedded_resource!(UI_FONT, "../resources/sm_16x16.png");
+embedded_resource!(UI_FONT, "../resources/Bisasam_16x16.png");
+
 fn main() -> BError {
-    let context = BTermBuilder::simple(TERM_WIDTH, TERM_HEIGHT)?
+    link_resource!(UI_FONT, format!("resources/{}", TERM_UI_FONT));
+
+    // This initialization is a bit more complicated than the previous examples.
+    let context = BTermBuilder::new()
+        // We specify the CONSOLE dimensions
+        .with_dimensions(TERM_WIDTH as u32, TERM_HEIGHT as u32)
+        // We specify the size of the tiles
+        .with_tile_dimensions(16u32, 16u32)
+        // We give it a window title
         .with_title("Griphus")
+        // We register our embedded "example_tiles.png" as a font.
+        .with_font(TERM_UI_FONT, 16u32, 16u32)
+        // We want a base simple console for the terrain background
+        .with_simple_console(TERM_WIDTH as u32, TERM_HEIGHT as u32, TERM_UI_FONT)
+        //.with_sparse_console_no_bg(TERM_WIDTH as u32, TERM_HEIGHT as u32, "Bisasam_16x16.png")
+        //.with_sparse_console_no_bg(TERM_WIDTH as u32, TERM_HEIGHT as u32, "Bisasam_16x16.png")
+        // And we call the builder function
         .build()?;
+
     let mut gs = State::new();
     gs.rsrc.insert(RunState::Menu);
     gs.rsrc.insert(map::Map::empty());

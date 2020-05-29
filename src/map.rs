@@ -15,6 +15,7 @@ pub enum TileType {
     Exit,
 }
 pub struct Map {
+    pub level: u64,
     tiles: Vec<TileType>,
     blocked_tiles: Vec<bool>,
     content_tiles: Vec<Vec<Entity>>,
@@ -25,6 +26,7 @@ pub struct Map {
 impl Map {
     pub fn empty() -> Map {
         Map {
+            level: 0,
             tiles: vec![],
             blocked_tiles: vec![],
             content_tiles: vec![],
@@ -33,8 +35,9 @@ impl Map {
             height: 0,
         }
     }
-    pub fn new(width: i32, height: i32) -> Map {
+    pub fn new(level: u64, width: i32, height: i32) -> Map {
         let mut map = Map {
+            level,
             tiles: vec![TileType::Floor; (width * height) as usize],
             blocked_tiles: vec![false; (width * height) as usize],
             content_tiles: vec![vec![]; (width * height) as usize],

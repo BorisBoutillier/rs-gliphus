@@ -9,8 +9,6 @@ pub enum Cardinal {
     W,
     NE,
     NW,
-    SE,
-    SW,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Position {

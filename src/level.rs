@@ -15,7 +15,7 @@ use std::fs;
 
 pub fn load_level(gs: &mut State, level: u64) {
     match level {
-        x if x <= 2 => load_level_from_file(level, &format!("resources/level_00{}.txt", level), gs),
+        x if x <= 4 => load_level_from_file(level, &format!("resources/level_00{}.txt", level), gs),
         _ => load_level_from_file(level, "resources/level_end.txt", gs),
     }
 }

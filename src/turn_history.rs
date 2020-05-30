@@ -16,6 +16,7 @@ pub enum TurnState {
 }
 
 pub struct TurnsHistory {
+    pub steps: i32,
     pub energy_used: i32,
     pub state: TurnState,
     pub history: Vec<Vec<Action>>,
@@ -23,6 +24,7 @@ pub struct TurnsHistory {
 impl TurnsHistory {
     pub fn new() -> TurnsHistory {
         TurnsHistory {
+            steps: 0,
             energy_used: 0,
             state: TurnState::Running,
             history: vec![],
@@ -45,6 +47,7 @@ impl TurnsHistory {
             }
         }
         self.history.push(actions);
+        self.steps += 1;
     }
     pub fn undo_last_turn(&mut self, ecs: &mut World) {
         if let Some(actions) = self.history.pop() {
@@ -69,6 +72,7 @@ impl TurnsHistory {
                     renderable.fg = RGB::named(YELLOW);
                 }
             }
+            self.steps -= 1;
             self.state = TurnState::Running;
         }
     }

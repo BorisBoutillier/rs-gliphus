@@ -26,7 +26,7 @@ pub struct Map {
 impl Map {
     pub fn empty() -> Map {
         Map {
-            level: 1,
+            level: 0,
             tiles: vec![],
             blocked_tiles: vec![],
             content_tiles: vec![],

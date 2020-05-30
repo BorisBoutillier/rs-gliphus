@@ -2,6 +2,7 @@ use super::State;
 use crate::components::{Actuator, Player, Position};
 use crate::map;
 use crate::{
+    gui::MainMenuSelection,
     turn_history::{Action, TurnsHistory},
     RunState,
 };
@@ -75,7 +76,11 @@ pub fn game_turn_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
                 turn_history.undo_last_turn(&mut gs.ecs);
                 actions = vec![];
             }
-            VirtualKeyCode::Escape => return RunState::Menu,
+            VirtualKeyCode::Escape => {
+                return RunState::MainMenu {
+                    menu_selection: MainMenuSelection::Continue,
+                }
+            }
             _ => {
                 return RunState::GameAwaitingInput;
             }

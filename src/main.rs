@@ -2,7 +2,7 @@ use bracket_lib::prelude::*;
 use legion::prelude::*;
 mod components;
 use components::{Position, Renderable};
-use gui::draw_ui;
+use gui::{draw_ui, MainMenuSelection};
 use turn_history::{TurnState, TurnsHistory};
 mod glyphs;
 mod gui;
@@ -15,29 +15,58 @@ mod turn_history;
 pub const TERM_WIDTH: i32 = 40;
 pub const TERM_HEIGHT: i32 = 30;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum RunState {
-    Menu,
+    MainMenu { menu_selection: MainMenuSelection },
     LoadLevel(u64),
     GameAwaitingInput,
     GameTurn,
-    GameEndDead,
-    GameLevelEnd,
+    GameDraw,
 }
 pub struct State {
     pub ecs: World,
     pub rsrc: Resources,
     schedule: Schedule,
+    ai: bool,
 }
 impl GameState for State {
     fn tick(&mut self, ctx: &mut BTerm) {
         let runstate = *(self.rsrc.get::<RunState>().unwrap());
         let newrunstate;
         match runstate {
-            RunState::Menu => {
+            RunState::MainMenu { .. } => {
                 ctx.cls();
-                gui::draw_menu(ctx);
-                newrunstate = gui::menu_input(self, ctx);
+                let result = gui::main_menu(self, ctx);
+                match result {
+                    gui::MainMenuResult::NoSelection { selected } => {
+                        newrunstate = RunState::MainMenu {
+                            menu_selection: selected,
+                        }
+                    }
+                    gui::MainMenuResult::Selected { selected } => match selected {
+                        gui::MainMenuSelection::NewPlayerGame => {
+                            self.ai = false;
+                            newrunstate = RunState::LoadLevel(1)
+                        }
+                        gui::MainMenuSelection::NewAiGame => {
+                            self.ai = true;
+                            newrunstate = RunState::LoadLevel(5)
+                        }
+                        gui::MainMenuSelection::Continue => {
+                            let map = self.rsrc.get::<map::Map>().unwrap();
+                            if map.level != 0 {
+                                newrunstate = RunState::GameDraw
+                            } else {
+                                newrunstate = RunState::MainMenu {
+                                    menu_selection: selected,
+                                }
+                            }
+                        }
+                        gui::MainMenuSelection::Quit => {
+                            ::std::process::exit(0);
+                        }
+                    },
+                }
             }
             RunState::LoadLevel(level) => {
                 level::load_level(self, level);
@@ -51,26 +80,24 @@ impl GameState for State {
             }
             RunState::GameTurn => {
                 self.run_game_systems();
+                newrunstate = RunState::GameDraw;
+            }
+            RunState::GameDraw => {
+                self.run_game_systems();
                 ctx.cls();
                 self.draw_game(ctx);
-                let history = self.rsrc.get::<TurnsHistory>().unwrap();
-                newrunstate = match history.state {
-                    TurnState::PlayerDead => RunState::GameEndDead,
-                    TurnState::PlayerAtExit => RunState::GameLevelEnd,
+                let curstate = self.rsrc.get::<TurnsHistory>().unwrap().state;
+                newrunstate = match curstate {
+                    TurnState::PlayerDead => {
+                        gui::draw_dead(self, ctx);
+                        gui::game_end_dead_input(self, ctx)
+                    }
+                    TurnState::PlayerAtExit => {
+                        gui::draw_level_solved(self, ctx);
+                        gui::game_level_end_input(self, ctx)
+                    }
                     TurnState::Running => RunState::GameAwaitingInput,
                 };
-            }
-            RunState::GameEndDead => {
-                ctx.cls();
-                self.draw_game(ctx);
-                gui::draw_dead(self, ctx);
-                newrunstate = gui::game_end_dead_input(self, ctx);
-            }
-            RunState::GameLevelEnd => {
-                ctx.cls();
-                self.draw_game(ctx);
-                gui::draw_level_solved(self, ctx);
-                newrunstate = gui::game_level_end_input(self, ctx);
             }
         }
         self.rsrc.insert(newrunstate);
@@ -85,6 +112,7 @@ impl State {
             ecs: world,
             rsrc: resources,
             schedule: systems::build_systems(),
+            ai: false,
         }
     }
     fn run_game_systems(&mut self) {
@@ -129,7 +157,9 @@ fn main() -> BError {
         .build()?;
 
     let mut gs = State::new();
-    gs.rsrc.insert(RunState::Menu);
+    gs.rsrc.insert(RunState::MainMenu {
+        menu_selection: MainMenuSelection::NewPlayerGame,
+    });
     gs.rsrc.insert(map::Map::empty());
     main_loop(context, gs)
 }

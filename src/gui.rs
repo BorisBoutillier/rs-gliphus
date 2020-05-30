@@ -97,10 +97,28 @@ pub fn draw_ui(gs: &State, ctx: &mut BTerm) {
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum MainMenuSelection {
-    NewPlayerGame,
-    NewAiGame,
-    Continue,
-    Quit,
+    NewPlayerGame = 0,
+    NewAiGame = 1,
+    Continue = 2,
+    Quit = 3,
+}
+impl MainMenuSelection {
+    fn get_name(&self) -> String {
+        String::from(match self {
+            MainMenuSelection::NewPlayerGame => "New Game",
+            MainMenuSelection::NewAiGame => "New AI Game",
+            MainMenuSelection::Continue => "Continue",
+            MainMenuSelection::Quit => "Quit",
+        })
+    }
+    fn print(&self, y: i32, selection: MainMenuSelection, ctx: &mut BTerm) {
+        let fg = if &selection == self {
+            RGB::named(MAGENTA)
+        } else {
+            RGB::named(WHITE)
+        };
+        ctx.print_color_centered(y, fg, RGB::named(BLACK), self.get_name());
+    }
 }
 
 #[derive(PartialEq, Copy, Clone)]
@@ -108,95 +126,64 @@ pub enum MainMenuResult {
     NoSelection { selected: MainMenuSelection },
     Selected { selected: MainMenuSelection },
 }
-pub fn main_menu(gs: &mut State, ctx: &mut BTerm) -> MainMenuResult {
-    let runstate = gs.rsrc.get::<RunState>().unwrap();
-
+pub fn main_menu(
+    ctx: &mut BTerm,
+    selection: MainMenuSelection,
+    can_continue: bool,
+) -> MainMenuResult {
     ctx.print_color_centered(11, RGB::named(YELLOW), RGB::named(BLACK), "Griphus");
 
-    if let RunState::MainMenu {
-        menu_selection: selection,
-    } = *runstate
-    {
-        let color = if selection == MainMenuSelection::NewPlayerGame {
-            RGB::named(MAGENTA)
-        } else {
-            RGB::named(WHITE)
-        };
-        ctx.print_color_centered(14, color, RGB::named(BLACK), "New Game");
-        let color = if selection == MainMenuSelection::NewAiGame {
-            RGB::named(MAGENTA)
-        } else {
-            RGB::named(WHITE)
-        };
-        ctx.print_color_centered(15, color, RGB::named(BLACK), "New AI Game");
-        let color = if selection == MainMenuSelection::Continue {
-            RGB::named(MAGENTA)
-        } else {
-            RGB::named(WHITE)
-        };
-        ctx.print_color_centered(16, color, RGB::named(BLACK), "Continue");
-        let color = if selection == MainMenuSelection::Quit {
-            RGB::named(MAGENTA)
-        } else {
-            RGB::named(WHITE)
-        };
-        ctx.print_color_centered(17, color, RGB::named(BLACK), "Quit");
-
-        match ctx.key {
-            None => {
+    let entries = if can_continue {
+        vec![
+            MainMenuSelection::NewPlayerGame,
+            MainMenuSelection::NewAiGame,
+            MainMenuSelection::Continue,
+            MainMenuSelection::Quit,
+        ]
+    } else {
+        vec![
+            MainMenuSelection::NewPlayerGame,
+            MainMenuSelection::NewAiGame,
+            MainMenuSelection::Quit,
+        ]
+    };
+    for (i, entry) in entries.iter().enumerate() {
+        entry.print(14 + i as i32, selection, ctx);
+    }
+    match ctx.key {
+        None => {
+            return MainMenuResult::NoSelection {
+                selected: selection,
+            }
+        }
+        Some(key) => match key {
+            VirtualKeyCode::Escape => {
+                return MainMenuResult::NoSelection {
+                    selected: MainMenuSelection::Quit,
+                }
+            }
+            VirtualKeyCode::Up => {
+                let idx = entries.iter().position(|&x| x == selection).unwrap();
+                return MainMenuResult::NoSelection {
+                    selected: entries[(idx + entries.len() - 1) % entries.len()],
+                };
+            }
+            VirtualKeyCode::Down => {
+                let idx = entries.iter().position(|&x| x == selection).unwrap();
+                return MainMenuResult::NoSelection {
+                    selected: entries[(idx + 1) % entries.len()],
+                };
+            }
+            VirtualKeyCode::Return => {
+                return MainMenuResult::Selected {
+                    selected: selection,
+                }
+            }
+            _ => {
                 return MainMenuResult::NoSelection {
                     selected: selection,
                 }
             }
-            Some(key) => match key {
-                VirtualKeyCode::Escape => {
-                    return MainMenuResult::NoSelection {
-                        selected: MainMenuSelection::Quit,
-                    }
-                }
-                VirtualKeyCode::Up => {
-                    let newselection;
-                    match selection {
-                        MainMenuSelection::NewPlayerGame => newselection = MainMenuSelection::Quit,
-                        MainMenuSelection::NewAiGame => {
-                            newselection = MainMenuSelection::NewPlayerGame
-                        }
-                        MainMenuSelection::Continue => newselection = MainMenuSelection::NewAiGame,
-                        MainMenuSelection::Quit => newselection = MainMenuSelection::Continue,
-                    }
-                    return MainMenuResult::NoSelection {
-                        selected: newselection,
-                    };
-                }
-                VirtualKeyCode::Down => {
-                    let newselection;
-                    match selection {
-                        MainMenuSelection::NewPlayerGame => {
-                            newselection = MainMenuSelection::NewAiGame
-                        }
-                        MainMenuSelection::NewAiGame => newselection = MainMenuSelection::Continue,
-                        MainMenuSelection::Continue => newselection = MainMenuSelection::Quit,
-                        MainMenuSelection::Quit => newselection = MainMenuSelection::NewPlayerGame,
-                    }
-                    return MainMenuResult::NoSelection {
-                        selected: newselection,
-                    };
-                }
-                VirtualKeyCode::Return => {
-                    return MainMenuResult::Selected {
-                        selected: selection,
-                    }
-                }
-                _ => {
-                    return MainMenuResult::NoSelection {
-                        selected: selection,
-                    }
-                }
-            },
-        }
-    }
-
-    MainMenuResult::NoSelection {
-        selected: MainMenuSelection::NewPlayerGame,
+        },
     }
 }

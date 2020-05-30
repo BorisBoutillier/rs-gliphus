@@ -34,9 +34,13 @@ impl GameState for State {
         let runstate = *(self.rsrc.get::<RunState>().unwrap());
         let newrunstate;
         match runstate {
-            RunState::MainMenu { .. } => {
+            RunState::MainMenu {
+                menu_selection: selection,
+            } => {
+                let map = self.rsrc.get::<map::Map>().unwrap();
+                let can_continue = map.level != 0;
                 ctx.cls();
-                let result = gui::main_menu(self, ctx);
+                let result = gui::main_menu(ctx, selection, can_continue);
                 match result {
                     gui::MainMenuResult::NoSelection { selected } => {
                         newrunstate = RunState::MainMenu {
@@ -52,16 +56,7 @@ impl GameState for State {
                             self.ai = true;
                             newrunstate = RunState::LoadLevel(5)
                         }
-                        gui::MainMenuSelection::Continue => {
-                            let map = self.rsrc.get::<map::Map>().unwrap();
-                            if map.level != 0 {
-                                newrunstate = RunState::GameDraw
-                            } else {
-                                newrunstate = RunState::MainMenu {
-                                    menu_selection: selected,
-                                }
-                            }
-                        }
+                        gui::MainMenuSelection::Continue => newrunstate = RunState::GameDraw,
                         gui::MainMenuSelection::Quit => {
                             ::std::process::exit(0);
                         }

@@ -1,13 +1,13 @@
 use crate::{
     components::Cardinal,
-    gui::MainMenuSelection,
+    gui::{draw_ui, MainMenuSelection},
+    map,
     player::{try_actuate, try_move_player},
-    turn_history::TurnsHistory,
+    turn_history::{TurnState, TurnsHistory},
     RunState,
 };
 use bracket_lib::prelude::*;
 use legion::prelude::*;
-use std::time;
 
 enum AiActions {
     MoveN,
@@ -38,14 +38,23 @@ enum AiState {
     Pause,
 }
 pub struct AI {
+    pub show: bool,
+    pub deaths: u64,
     state: AiState,
-    last_key_pressed: time::Instant,
 }
 impl AI {
     pub fn new() -> AI {
         AI {
-            state: AiState::Run,
-            last_key_pressed: time::Instant::now(),
+            show: false,
+            deaths: 0,
+            state: AiState::Pause,
+        }
+    }
+    pub fn draw_state(&self, rsrc: &Resources, ctx: &mut BTerm) {
+        draw_ui(rsrc, ctx);
+        ctx.print(20, 1, format!("Deaths : {}", self.deaths));
+        if self.state == AiState::Pause {
+            ctx.print_color_centered(6, RGB::named(RED1), RGB::named(LIGHT_GRAY), "Paused!");
         }
     }
     pub fn play_next_turn(
@@ -68,30 +77,45 @@ impl AI {
                 _ => AiActions::Actuate.play(ecs, rsrc),
             }
         }
-        if self.last_key_pressed.elapsed() >= time::Duration::from_millis(100) {
-            if let Some(key) = ctx.key {
-                match key {
-                    VirtualKeyCode::Space => {
-                        self.state = if self.state == AiState::Pause {
-                            AiState::Run
-                        } else {
-                            AiState::Pause
-                        }
+        if let Some(key) = ctx.key {
+            match key {
+                VirtualKeyCode::Space => {
+                    self.state = if self.state == AiState::Pause {
+                        AiState::Run
+                    } else {
+                        AiState::Pause
                     }
-                    VirtualKeyCode::Escape => {
-                        return RunState::MainMenu {
-                            menu_selection: MainMenuSelection::Continue,
-                        }
-                    }
-                    _ => {}
                 }
-                self.last_key_pressed = time::Instant::now();
+                VirtualKeyCode::S => {
+                    self.show = !self.show;
+                }
+                VirtualKeyCode::Escape => {
+                    return RunState::MainMenu {
+                        menu_selection: MainMenuSelection::Continue,
+                    }
+                }
+                _ => {}
             }
         }
         if self.state == AiState::Pause {
-            RunState::GameAwaitingInput
+            RunState::GameDraw
         } else {
             RunState::GameTurn
+        }
+    }
+    pub fn end_turn(&mut self, rsrc: &Resources) -> RunState {
+        let curstate = rsrc.get::<TurnsHistory>().unwrap().state;
+        match curstate {
+            TurnState::PlayerDead => {
+                let level = rsrc.get::<map::Map>().unwrap().level;
+                self.deaths += 1;
+                RunState::LoadLevel(level)
+            }
+            TurnState::PlayerAtExit => {
+                let level = rsrc.get::<map::Map>().unwrap().level;
+                RunState::LoadLevel(level + 1)
+            }
+            TurnState::Running => RunState::GameAwaitingInput,
         }
     }
 }

@@ -68,7 +68,9 @@ impl GameState for State {
                 level::load_level(self, level);
                 self.run_game_systems();
                 ctx.cls();
-                self.draw_game(ctx);
+                if self.ai.as_ref().map_or(true, |x| x.show) {
+                    self.draw_game(ctx);
+                }
                 newrunstate = RunState::GameAwaitingInput;
             }
             RunState::GameAwaitingInput => {
@@ -84,20 +86,37 @@ impl GameState for State {
             }
             RunState::GameDraw => {
                 self.run_game_systems();
-                ctx.cls();
-                self.draw_game(ctx);
                 let curstate = self.rsrc.get::<TurnsHistory>().unwrap().state;
-                newrunstate = match curstate {
-                    TurnState::PlayerDead => {
-                        gui::draw_dead(self, ctx);
-                        gui::game_end_dead_input(self, ctx)
-                    }
-                    TurnState::PlayerAtExit => {
-                        gui::draw_level_solved(self, ctx);
-                        gui::game_level_end_input(self, ctx)
-                    }
-                    TurnState::Running => RunState::GameAwaitingInput,
-                };
+                ctx.cls();
+                let show = self.ai.as_ref().map_or(true, |x| x.show);
+                if show {
+                    self.draw_game(ctx);
+                    match curstate {
+                        TurnState::PlayerDead => {
+                            gui::draw_dead(self, ctx);
+                        }
+                        TurnState::PlayerAtExit => {
+                            gui::draw_level_solved(self, ctx);
+                        }
+                        TurnState::Running => {}
+                    };
+                }
+                if self.ai.is_none() {
+                    newrunstate = match curstate {
+                        TurnState::PlayerDead => {
+                            gui::draw_dead(self, ctx);
+                            gui::game_end_dead_input(self, ctx)
+                        }
+                        TurnState::PlayerAtExit => {
+                            gui::draw_level_solved(self, ctx);
+                            gui::game_level_end_input(self, ctx)
+                        }
+                        TurnState::Running => RunState::GameAwaitingInput,
+                    };
+                } else {
+                    self.ai.as_ref().unwrap().draw_state(&self.rsrc, ctx);
+                    newrunstate = self.ai.as_mut().unwrap().end_turn(&self.rsrc);
+                }
             }
         }
         self.rsrc.insert(newrunstate);
@@ -136,7 +155,7 @@ impl State {
                 render.glyph,
             );
         }
-        draw_ui(self, ctx);
+        draw_ui(&self.rsrc, ctx);
     }
 }
 

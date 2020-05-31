@@ -95,9 +95,9 @@ pub fn game_level_end_input(gs: &State, ctx: &mut BTerm) -> RunState {
 pub fn draw_ui(rsrc: &Resources, ctx: &mut BTerm) {
     let map = rsrc.get::<map::Map>().unwrap();
     let turn_history = rsrc.get::<TurnsHistory>().unwrap();
-    ctx.print(1, 1, format!("Level No {}", map.level));
-    ctx.print(1, 2, format!("Steps  : {}", turn_history.steps));
-    ctx.print(1, 3, format!("Energy : {}", turn_history.energy_used));
+    ctx.print(1, 1, format!("Level : {}", map.level));
+    ctx.print(1, 2, format!("Steps : {}", turn_history.steps));
+    ctx.print(1, 3, format!("Energy: {}", turn_history.energy_used));
 }
 
 #[derive(PartialEq, Copy, Clone)]

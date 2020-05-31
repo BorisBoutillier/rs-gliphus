@@ -55,7 +55,7 @@ impl GameState for State {
                         }
                         gui::MainMenuSelection::NewAiGame => {
                             self.ai = Some(ai::AI::new());
-                            newrunstate = RunState::LoadLevel(10001)
+                            newrunstate = RunState::LoadLevel(10004)
                         }
                         gui::MainMenuSelection::Continue => newrunstate = RunState::GameDraw,
                         gui::MainMenuSelection::Quit => {

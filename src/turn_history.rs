@@ -76,4 +76,9 @@ impl TurnsHistory {
             self.state = TurnState::Running;
         }
     }
+    pub fn undo(&mut self, n_steps: i32, ecs: &mut World) {
+        for _i in 0..n_steps {
+            self.undo_last_turn(ecs);
+        }
+    }
 }

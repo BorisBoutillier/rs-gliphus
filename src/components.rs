@@ -10,6 +10,26 @@ pub enum Cardinal {
     NE,
     NW,
 }
+impl Cardinal {
+    pub fn get_delta_xy(&self) -> (i32, i32) {
+        match self {
+            Cardinal::N => (0, -1),
+            Cardinal::S => (0, 1),
+            Cardinal::E => (1, 0),
+            Cardinal::W => (-1, 0),
+            _ => panic!("Can only get_delta_xy for N,S,E,W"),
+        }
+    }
+    pub fn inv(&self) -> Cardinal {
+        match self {
+            Cardinal::N => Cardinal::S,
+            Cardinal::S => Cardinal::N,
+            Cardinal::E => Cardinal::W,
+            Cardinal::W => Cardinal::E,
+            _ => panic!("Can only get_delta_xy for N,S,E,W"),
+        }
+    }
+}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Position {
     pub x: i32,

@@ -11,8 +11,8 @@ use legion::prelude::*;
 
 pub fn try_move_player(direction: Cardinal, ecs: &mut World, rsrc: &mut Resources) -> Vec<Action> {
     let (delta_x, delta_y) = match direction {
-        Cardinal::E => (-1, 0),
-        Cardinal::W => (1, 0),
+        Cardinal::E => (1, 0),
+        Cardinal::W => (-1, 0),
         Cardinal::N => (0, -1),
         Cardinal::S => (0, 1),
         _ => {
@@ -76,10 +76,10 @@ pub fn game_turn_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
         }
         Some(key) => match key {
             VirtualKeyCode::Left => {
-                actions = try_move_player(Cardinal::E, &mut gs.ecs, &mut gs.rsrc)
+                actions = try_move_player(Cardinal::W, &mut gs.ecs, &mut gs.rsrc)
             }
             VirtualKeyCode::Right => {
-                actions = try_move_player(Cardinal::W, &mut gs.ecs, &mut gs.rsrc)
+                actions = try_move_player(Cardinal::E, &mut gs.ecs, &mut gs.rsrc)
             }
             VirtualKeyCode::Up => actions = try_move_player(Cardinal::N, &mut gs.ecs, &mut gs.rsrc),
             VirtualKeyCode::Down => {

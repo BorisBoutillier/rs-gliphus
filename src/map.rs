@@ -19,6 +19,7 @@ pub struct Map {
     blocked_tiles: Vec<bool>,
     content_tiles: Vec<Vec<Entity>>,
     lasered_tiles: Vec<Vec<Cardinal>>,
+    exit_tiles: Vec<usize>,
     pub width: i32,
     pub height: i32,
 }
@@ -30,6 +31,7 @@ impl Map {
             blocked_tiles: vec![],
             content_tiles: vec![],
             lasered_tiles: vec![],
+            exit_tiles: vec![],
             width: 0,
             height: 0,
         }
@@ -41,6 +43,7 @@ impl Map {
             blocked_tiles: vec![false; (width * height) as usize],
             content_tiles: vec![vec![]; (width * height) as usize],
             lasered_tiles: vec![vec![]; (width * height) as usize],
+            exit_tiles: vec![],
             width,
             height,
         };
@@ -62,6 +65,9 @@ impl Map {
     pub fn set_tiletype(&mut self, x: i32, y: i32, tiletype: TileType) {
         let idx = self.xy_idx(x, y);
         self.tiles[idx] = tiletype;
+        if tiletype == TileType::Exit {
+            self.exit_tiles.push(idx);
+        }
     }
     pub fn reset_lasered(&mut self) {
         for lasered_tile in self.lasered_tiles.iter_mut() {
@@ -177,5 +183,80 @@ impl Map {
                 }
             }
         }
+    }
+    /// True if the tile is not blocked and is not lasered.
+    /// Allow AI to choose meaningfull movements
+    pub fn is_exit_valid(&self, x: i32, y: i32) -> bool {
+        if x < 0 || y < 0 || x >= self.width || y >= self.height {
+            return false;
+        }
+        !self.is_blocked(x, y) && !self.is_lasered(x, y)
+    }
+    pub fn get_exits(&self) -> Vec<(i32, i32)> {
+        self.exit_tiles
+            .iter()
+            .map(|&idx| self.idx_xy(idx))
+            .collect::<Vec<_>>()
+    }
+    ///
+    pub fn try_go_to(&self, from: (i32, i32), to: (i32, i32)) -> Option<Vec<Cardinal>> {
+        if from == to {
+            return Some(vec![]);
+        }
+        if self.is_blocked(to.0, to.1) || self.is_lasered(to.0, to.1) {
+            return None;
+        }
+        let start = self.xy_idx(from.0, from.1);
+        let end = self.xy_idx(to.0, to.1);
+        let res = a_star_search(start, end, self);
+        if !res.success {
+            return None;
+        };
+        let mut directions = vec![];
+        for (&idx1, &idx2) in res.steps.iter().zip(res.steps[1..].iter()) {
+            directions.push(match idx2 as i32 - idx1 as i32 {
+                1 => Cardinal::E,
+                -1 => Cardinal::W,
+                x if x == -self.width => Cardinal::N,
+                x if x == self.width => Cardinal::S,
+                _ => panic!(format!("Unexpected diff between idxes {} {}", idx1, idx2)),
+            });
+        }
+        Some(directions)
+    }
+}
+impl BaseMap for Map {
+    fn get_available_exits(&self, idx: usize) -> SmallVec<[(usize, f32); 10]> {
+        let mut exits = SmallVec::new();
+        let x = (idx % self.width as usize) as i32;
+        let y = (idx / self.width as usize) as i32;
+        let w = self.width as usize;
+
+        // Cardinal directions
+        if self.is_exit_valid(x - 1, y) {
+            exits.push((idx - 1, 1.0))
+        };
+        if self.is_exit_valid(x + 1, y) {
+            exits.push((idx + 1, 1.0))
+        };
+        if self.is_exit_valid(x, y - 1) {
+            exits.push((idx - w, 1.0))
+        };
+        if self.is_exit_valid(x, y + 1) {
+            exits.push((idx + w, 1.0))
+        };
+        exits
+    }
+
+    fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
+        let w = self.width as usize;
+        let p1 = Point::new(idx1 % w, idx1 / w);
+        let p2 = Point::new(idx2 % w, idx2 / w);
+        DistanceAlg::Manhattan.distance2d(p1, p2)
+    }
+}
+impl Algorithm2D for Map {
+    fn dimensions(&self) -> Point {
+        Point::new(self.width, self.height)
     }
 }

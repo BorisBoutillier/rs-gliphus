@@ -65,6 +65,10 @@ pub fn game_end_dead_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
             VirtualKeyCode::Return => RunState::MainMenu {
                 menu_selection: MainMenuSelection::NewPlayerGame,
             },
+            VirtualKeyCode::R => {
+                let map = gs.rsrc.get::<map::Map>().unwrap();
+                RunState::LoadLevel(map.level)
+            }
             VirtualKeyCode::Back => {
                 let mut turn_history = gs.rsrc.get_mut::<TurnsHistory>().unwrap();
                 turn_history.undo_last_turn(&mut gs.ecs);

@@ -1,7 +1,6 @@
 use crate::{
     components::{BlocksLaser, BlocksTile, Cardinal, Movable, ReflectsLaser},
     glyphs::*,
-    State,
 };
 use bracket_lib::prelude::*;
 use legion::prelude::*;
@@ -132,11 +131,11 @@ impl Map {
         self.content_tiles[idx].iter()
     }
     /// Among the entities on the tile, the return the one that is BlocksTile and Movable if it exists.
-    pub fn movable(&self, x: i32, y: i32, gs: &State) -> Option<Entity> {
+    pub fn movable(&self, x: i32, y: i32, ecs: &World) -> Option<Entity> {
         let idx = self.xy_idx(x, y);
         for &entity in self.content_tiles[idx].iter() {
-            if gs.ecs.get_tag::<BlocksTile>(entity).is_some()
-                && gs.ecs.get_tag::<Movable>(entity).is_some()
+            if ecs.get_tag::<BlocksTile>(entity).is_some()
+                && ecs.get_tag::<Movable>(entity).is_some()
             {
                 return Some(entity);
             }

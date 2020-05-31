@@ -4,6 +4,7 @@ mod components;
 use components::{Position, Renderable};
 use gui::{draw_ui, MainMenuSelection};
 use turn_history::{TurnState, TurnsHistory};
+mod ai;
 mod glyphs;
 mod gui;
 mod level;
@@ -27,7 +28,7 @@ pub struct State {
     pub ecs: World,
     pub rsrc: Resources,
     schedule: Schedule,
-    ai: bool,
+    ai: Option<ai::AI>,
 }
 impl GameState for State {
     fn tick(&mut self, ctx: &mut BTerm) {
@@ -49,12 +50,12 @@ impl GameState for State {
                     }
                     gui::MainMenuResult::Selected { selected } => match selected {
                         gui::MainMenuSelection::NewPlayerGame => {
-                            self.ai = false;
+                            self.ai = None;
                             newrunstate = RunState::LoadLevel(1)
                         }
                         gui::MainMenuSelection::NewAiGame => {
-                            self.ai = true;
-                            newrunstate = RunState::LoadLevel(5)
+                            self.ai = Some(ai::AI::new());
+                            newrunstate = RunState::LoadLevel(10001)
                         }
                         gui::MainMenuSelection::Continue => newrunstate = RunState::GameDraw,
                         gui::MainMenuSelection::Quit => {
@@ -71,7 +72,11 @@ impl GameState for State {
                 newrunstate = RunState::GameAwaitingInput;
             }
             RunState::GameAwaitingInput => {
-                newrunstate = player::game_turn_input(self, ctx);
+                if let Some(ai) = self.ai.as_mut() {
+                    newrunstate = ai.play_next_turn(&mut self.ecs, &mut self.rsrc, ctx);
+                } else {
+                    newrunstate = player::game_turn_input(self, ctx);
+                }
             }
             RunState::GameTurn => {
                 self.run_game_systems();
@@ -107,7 +112,7 @@ impl State {
             ecs: world,
             rsrc: resources,
             schedule: systems::build_systems(),
-            ai: false,
+            ai: None,
         }
     }
     fn run_game_systems(&mut self) {
@@ -156,5 +161,6 @@ fn main() -> BError {
         menu_selection: MainMenuSelection::NewPlayerGame,
     });
     gs.rsrc.insert(map::Map::empty());
+    gs.rsrc.insert(RandomNumberGenerator::new());
     main_loop(context, gs)
 }

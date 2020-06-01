@@ -80,7 +80,9 @@ pub struct BlocksLaser {}
 pub struct Movable {}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Actuator {}
+pub struct Actuator {
+    pub state: u8,
+}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Actuated {}
 #[derive(Clone, Copy, Debug, PartialEq)]

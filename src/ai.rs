@@ -1,10 +1,11 @@
 use crate::{
+    ai_cache::AiStatesCache,
     components::{Actuator, Cardinal, Movable, Player, Position},
     gui::{draw_ui, MainMenuSelection},
     map,
     player::{try_actuate, try_move_player},
     turn_history::{TurnState, TurnsHistory},
-    RunState,
+    RunState, TERM_WIDTH,
 };
 use bracket_lib::prelude::*;
 use legion::prelude::*;
@@ -45,6 +46,7 @@ pub struct AI {
     pub duplicates: u64,
     pub paused: bool,
     pub finished: bool,
+    seen: AiStatesCache,
     history: AiHistory,
     sub_actions: Vec<AiSubAction>,
     sub_actions_success: bool,
@@ -59,6 +61,7 @@ impl AI {
             duplicates: 0,
             paused: true,
             finished: false,
+            seen: AiStatesCache::new(),
             history: AiHistory {
                 possibilities: vec![],
             },
@@ -72,8 +75,21 @@ impl AI {
         ctx.print(20, 2, format!("Duplicates: {}", self.duplicates));
         ctx.print(20, 3, format!("Solutions : {}", self.solutions));
         ctx.print(20, 4, format!("Min Energy: {}", "None"));
-        if self.paused {
-            ctx.print_color_centered(6, RGB::named(RED1), RGB::named(LIGHT_GRAY), "Paused!");
+        if self.finished {
+            let txt = "Solved !";
+            let start_x = (TERM_WIDTH - (txt.len() as i32 + 4)) / 2;
+            let start_y = 6;
+            ctx.draw_box(
+                start_x,
+                start_y,
+                txt.len() + 4 - 1,
+                2,
+                RGB::named(YELLOW),
+                RGB::named(BLACK),
+            );
+            ctx.print_color_centered(7, RGB::named(YELLOW), RGB::named(BLACK), txt);
+        } else if self.paused {
+            ctx.print_color_centered(7, RGB::named(YELLOW), RGB::named(BLACK), "Paused!");
         }
     }
     pub fn play_next_turn(
@@ -86,14 +102,15 @@ impl AI {
             if self.sub_actions.is_empty() {
                 let mut turn_history = rsrc.get_mut::<TurnsHistory>().unwrap();
                 let cur_step = turn_history.steps;
+                if self.seen.has_seen(ecs) {
+                    self.sub_actions_success = false;
+                    self.duplicates += 1;
+                }
                 if self.sub_actions_success {
                     self.history
                         .possibilities
                         .push((cur_step, self.find_possible_actions(ecs, rsrc)));
                 } else {
-                    if turn_history.state == TurnState::Running {
-                        self.dead_ends += 1;
-                    }
                     while !self.history.possibilities.is_empty()
                         && self.history.possibilities.last().unwrap().1.is_empty()
                     {
@@ -107,16 +124,24 @@ impl AI {
                     } else {
                         let undo_steps = cur_step - self.history.possibilities.last().unwrap().0;
                         turn_history.undo(undo_steps, ecs);
+                        //println!("    UNDO {}", undo_steps);
                     }
                 }
-                let (_tested_action, sub_actions) = self
-                    .history
-                    .possibilities
-                    .last_mut()
-                    .unwrap()
-                    .1
-                    .pop()
-                    .unwrap();
+                let mut choices = self.history.possibilities.last_mut().unwrap();
+                let i;
+                {
+                    let mut rng = rsrc.get_mut::<RandomNumberGenerator>().unwrap();
+                    i = rng.range(0, choices.1.len());
+                }
+                let (tested_action, sub_actions) = choices.1.remove(i);
+                //let (tested_action, sub_actions) = self
+                //    .history
+                //    .possibilities
+                //    .last_mut()
+                //    .unwrap()
+                //    .1
+                //    .pop()
+                //    .unwrap();
                 //println!(
                 //    "Depth {}. Doing {:?}",
                 //    self.history.possibilities.len(),
@@ -127,6 +152,10 @@ impl AI {
             if !self.sub_actions.is_empty() {
                 let action = self.sub_actions.remove(0);
                 self.sub_actions_success = action.play(ecs, rsrc);
+                if !self.sub_actions_success {
+                    self.dead_ends += 1;
+                }
+                //println!("    DO {:?}", action)
             }
         }
         self.get_next_runstate(ctx)
@@ -166,7 +195,9 @@ impl AI {
         let curstate = rsrc.get::<TurnsHistory>().unwrap().state;
         match curstate {
             TurnState::PlayerDead => {
-                panic!("Unexpected dying of player in an AI run");
+                self.dead_ends += 1;
+                self.sub_actions_success = false;
+                RunState::GameAwaitingInput
             }
             TurnState::PlayerAtExit => {
                 self.solutions += 1;
@@ -220,8 +251,8 @@ impl AI {
                 }
             }
             // Go to Activable and Activate
-            let query2 = <(Read<Position>,)>::query().filter(tag::<Actuator>());
-            for (activable_pos,) in query2.iter(&ecs) {
+            let query2 = <(Read<Position>, Read<Actuator>)>::query();
+            for (activable_pos, _actuator) in query2.iter(&ecs) {
                 for direction in &[Cardinal::N, Cardinal::S, Cardinal::W, Cardinal::E] {
                     let (dx, dy) = direction.get_delta_xy();
                     if let Some(directions) = map.try_go_to(

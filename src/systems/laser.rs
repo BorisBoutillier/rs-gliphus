@@ -1,5 +1,5 @@
 use crate::components::{
-    Actuated, Cardinal, Laser, Position, ReflectsLaser, Renderable, UndoActuated,
+    Actuated, Actuator, Cardinal, Laser, Position, ReflectsLaser, Renderable, UndoActuated,
 };
 use crate::{glyphs::*, map};
 use legion::prelude::*;
@@ -7,19 +7,26 @@ use legion::prelude::*;
 pub fn reflector_actuation_system() -> Box<dyn Schedulable> {
     SystemBuilder::new("reflector_acturation_system")
         .read_component::<ReflectsLaser>()
-        .with_query(<(Write<ReflectsLaser>, Write<Renderable>)>::query().filter(tag::<Actuated>()))
+        .with_query(
+            <(Write<ReflectsLaser>, Write<Renderable>, Write<Actuator>)>::query()
+                .filter(tag::<Actuated>()),
+        )
         .with_query(
             <(Write<ReflectsLaser>, Write<Renderable>)>::query().filter(tag::<UndoActuated>()),
         )
         .build(|cmd, mut world, _, (query1, query2)| {
-            for (entity, (mut reflector, mut renderable)) in query1.iter_entities_mut(&mut world) {
+            for (entity, (mut reflector, mut renderable, mut actuator)) in
+                query1.iter_entities_mut(&mut world)
+            {
                 match reflector.orientation {
                     Cardinal::NE => {
                         reflector.orientation = Cardinal::NW;
+                        actuator.state = 0;
                         renderable.glyph = REFLECTOR_NW;
                     }
                     _ => {
                         reflector.orientation = Cardinal::NE;
+                        actuator.state = 1;
                         renderable.glyph = REFLECTOR_NE;
                     }
                 };

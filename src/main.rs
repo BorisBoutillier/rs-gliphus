@@ -5,6 +5,7 @@ use components::{Position, Renderable};
 use gui::{draw_ui, MainMenuSelection};
 use turn_history::{TurnState, TurnsHistory};
 mod ai;
+mod ai_cache;
 mod glyphs;
 mod gui;
 mod level;
@@ -55,7 +56,7 @@ impl GameState for State {
                         }
                         gui::MainMenuSelection::NewAiGame => {
                             self.ai = Some(ai::AI::new());
-                            newrunstate = RunState::LoadLevel(10004)
+                            newrunstate = RunState::LoadLevel(4)
                         }
                         gui::MainMenuSelection::Continue => newrunstate = RunState::GameDraw,
                         gui::MainMenuSelection::Quit => {

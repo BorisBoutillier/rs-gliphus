@@ -58,7 +58,7 @@ pub fn try_actuate(ecs: &mut World, rsrc: &mut Resources) -> Vec<Action> {
     for (pos,) in query.iter(&ecs) {
         for (delta_x, delta_y) in vec![(0, 1), (0, -1), (1, 0), (-1, 0)].iter() {
             for &entity in map.iter_content(pos.x + delta_x, pos.y + delta_y) {
-                if ecs.get_tag::<Actuator>(entity).is_some() {
+                if ecs.get_component::<Actuator>(entity).is_some() {
                     actions.push(Action::Actuates(entity));
                     actions.push(Action::UseEnergy(1));
                 }

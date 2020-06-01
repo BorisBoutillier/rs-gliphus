@@ -197,7 +197,7 @@ fn spawn_door(gs: &mut State, x: i32, y: i32, activations: Vec<Entity>) -> Entit
 
 fn spawn_laser_reflector(gs: &mut State, x: i32, y: i32, orientation: Cardinal) -> Entity {
     gs.ecs.insert(
-        (BlocksTile {}, Movable {}, Actuator {}),
+        (BlocksTile {}, Movable {}),
         vec![(
             Position { x, y },
             Renderable {
@@ -212,6 +212,9 @@ fn spawn_laser_reflector(gs: &mut State, x: i32, y: i32, orientation: Cardinal) 
             },
             ReflectsLaser {
                 orientation: orientation,
+            },
+            Actuator {
+                state: if orientation == Cardinal::NW { 0 } else { 1 },
             },
         )],
     )[0]

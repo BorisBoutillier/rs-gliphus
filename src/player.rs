@@ -51,6 +51,29 @@ pub fn try_move_player(direction: Cardinal, ecs: &mut World, rsrc: &mut Resource
     }
     actions
 }
+pub fn try_teleport_player(
+    dest_x: i32,
+    dest_y: i32,
+    ecs: &mut World,
+    rsrc: &mut Resources,
+) -> Vec<Action> {
+    let query = <(Read<Position>,)>::query().filter(tag::<Player>());
+    let map = rsrc.get::<map::Map>().unwrap();
+    let mut actions = vec![];
+    for (player_entity, (pos,)) in query.iter_entities(&ecs) {
+        if pos.x == dest_x && pos.y == dest_y {
+            continue;
+        }
+        if !map.is_blocked(dest_x, dest_y) {
+            actions.push(Action::Moves(
+                player_entity,
+                (pos.x, pos.y),
+                (dest_x, dest_y),
+            ));
+        }
+    }
+    actions
+}
 pub fn try_actuate(ecs: &mut World, rsrc: &mut Resources) -> Vec<Action> {
     let query = <(Read<Position>,)>::query().filter(tag::<Player>());
     let map = rsrc.get::<map::Map>().unwrap();

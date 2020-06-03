@@ -1,5 +1,8 @@
 use crate::{
-    components::{BlocksLaser, BlocksTile, Cardinal, Movable, ReflectsLaser},
+    components::{
+        Activable, ActivationKind, Block, BlocksLaser, BlocksTile, Cardinal, Movable, Position,
+        ReflectsLaser,
+    },
     glyphs::*,
 };
 use bracket_lib::prelude::*;
@@ -223,6 +226,67 @@ impl Map {
             });
         }
         Some(directions)
+    }
+    pub fn can_go_to(&self, from: (i32, i32), to: (i32, i32)) -> bool {
+        if from == to {
+            return true;
+        }
+        if self.is_blocked(to.0, to.1) || self.is_lasered(to.0, to.1) {
+            return false;
+        }
+        let start = self.xy_idx(from.0, from.1);
+        let end = self.xy_idx(to.0, to.1);
+        let res = a_star_search(start, end, self);
+        res.success
+    }
+    pub fn has_plate(&self, x: i32, y: i32, ecs: &World) -> bool {
+        let idx = self.xy_idx(x, y);
+        for &entity in self.content_tiles[idx].iter() {
+            if let Some(activate) = ecs.get_component::<Activable>(entity) {
+                if activate.kind == ActivationKind::Weight {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /// Returns true if the map is impossible to solve
+    pub fn is_impossible(&self, ecs: &World) -> bool {
+        let query = <(Read<Position>,)>::query().filter(tag::<Movable>() & tag::<Block>());
+        for (_entity, (pos,)) in query.iter_entities(ecs) {
+            if self.has_plate(pos.x, pos.y, ecs) {
+                continue;
+            }
+            let mut blocked_mask = 0;
+            for (i, (dx, dy)) in vec![
+                (1, 0),
+                (1, -1),
+                (0, -1),
+                (-1, -1),
+                (-1, 0),
+                (-1, 1),
+                (0, 1),
+                (1, 1),
+            ]
+            .iter()
+            .enumerate()
+            {
+                if self.is_blocked(pos.x + dx, pos.y + dy) {
+                    blocked_mask |= 1 << i;
+                }
+            }
+            let ne = (blocked_mask & 0b00000111) == 0b00000111;
+            let nw = (blocked_mask & 0b00011100) == 0b00011100;
+            let sw = (blocked_mask & 0b01110000) == 0b01110000;
+            let se = (blocked_mask & 0b11000001) == 0b11000001;
+            if ne || nw || sw || se {
+                //println!("Blocked {} {} : {}", pos.x, pos.y, blocked_mask);
+                return true;
+            }
+        }
+        //
+        // Find is there is a movable
+        false
     }
 }
 impl BaseMap for Map {

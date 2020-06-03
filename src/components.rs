@@ -87,3 +87,6 @@ pub struct Actuator {
 pub struct Actuated {}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UndoActuated {}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Block {}

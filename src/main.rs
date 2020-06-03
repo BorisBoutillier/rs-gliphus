@@ -56,7 +56,7 @@ impl GameState for State {
                         }
                         gui::MainMenuSelection::NewAiGame => {
                             self.ai = Some(ai::AI::new());
-                            newrunstate = RunState::LoadLevel(4)
+                            newrunstate = RunState::LoadLevel(10001)
                         }
                         gui::MainMenuSelection::Continue => newrunstate = RunState::GameDraw,
                         gui::MainMenuSelection::Quit => {
@@ -166,12 +166,14 @@ embedded_resource!(UI_FONT, "../resources/Bisasam_20x20.png");
 fn main() -> BError {
     link_resource!(UI_FONT, format!("resources/{}", TERM_UI_FONT));
 
-    let context = BTermBuilder::new()
+    let ctx = BTermBuilder::new()
         .with_dimensions(TERM_WIDTH as u32, TERM_HEIGHT as u32)
         .with_tile_dimensions(20u32, 20u32)
         .with_title("Griphus")
         .with_font(TERM_UI_FONT, 20u32, 20u32)
         .with_simple_console(TERM_WIDTH as u32, TERM_HEIGHT as u32, TERM_UI_FONT)
+        //.with_fps_cap(240.0)
+        .with_vsync(false)
         //.with_sparse_console_no_bg(TERM_WIDTH as u32, TERM_HEIGHT as u32, "Bisasam_16x16.png")
         //.with_sparse_console_no_bg(TERM_WIDTH as u32, TERM_HEIGHT as u32, "Bisasam_16x16.png")
         .build()?;
@@ -181,6 +183,5 @@ fn main() -> BError {
         menu_selection: MainMenuSelection::NewPlayerGame,
     });
     gs.rsrc.insert(map::Map::empty());
-    gs.rsrc.insert(RandomNumberGenerator::new());
-    main_loop(context, gs)
+    main_loop(ctx, gs)
 }

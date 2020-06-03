@@ -3,12 +3,15 @@ use crate::{
     components::{Actuator, Cardinal, Movable, Player, Position},
     gui::{draw_ui, MainMenuSelection},
     map,
-    player::{try_actuate, try_move_player},
+    player::{try_actuate, try_move_player, try_teleport_player},
     turn_history::{TurnState, TurnsHistory},
     RunState, TERM_WIDTH,
 };
 use bracket_lib::prelude::*;
 use legion::prelude::*;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+use std::time;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AiAction {
@@ -19,6 +22,7 @@ pub enum AiAction {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AiSubAction {
     Move(Cardinal),
+    MoveTo(i32, i32),
     Actuate,
 }
 impl AiSubAction {
@@ -27,6 +31,7 @@ impl AiSubAction {
     fn play(&self, ecs: &mut World, rsrc: &mut Resources) -> bool {
         let actions = match &self {
             AiSubAction::Move(cardinal) => try_move_player(*cardinal, ecs, rsrc),
+            AiSubAction::MoveTo(x, y) => try_teleport_player(*x, *y, ecs, rsrc),
             AiSubAction::Actuate => try_actuate(ecs, rsrc),
         };
         if actions.len() > 0 {
@@ -46,8 +51,11 @@ pub struct AI {
     pub duplicates: u64,
     pub paused: bool,
     pub finished: bool,
+    start_time: time::Instant,
+    searches: i32,
     seen: AiStatesCache,
     history: AiHistory,
+    tested_action: AiAction,
     sub_actions: Vec<AiSubAction>,
     sub_actions_success: bool,
 }
@@ -61,10 +69,13 @@ impl AI {
             duplicates: 0,
             paused: true,
             finished: false,
+            start_time: time::Instant::now(),
+            searches: 0,
             seen: AiStatesCache::new(),
             history: AiHistory {
                 possibilities: vec![],
             },
+            tested_action: AiAction::ExitTo(0, 0),
             sub_actions: vec![],
             sub_actions_success: true,
         }
@@ -75,6 +86,15 @@ impl AI {
         ctx.print(20, 2, format!("Duplicates: {}", self.duplicates));
         ctx.print(20, 3, format!("Solutions : {}", self.solutions));
         ctx.print(20, 4, format!("Min Energy: {}", "None"));
+        ctx.print(1, 28, format!("Cache Size: {}", self.seen.get_size()));
+        ctx.print(
+            1,
+            29,
+            format!(
+                "SPS: {:.2}",
+                self.searches as f32 / self.start_time.elapsed().as_secs_f32()
+            ),
+        );
         if self.finished {
             let txt = "Solved !";
             let start_x = (TERM_WIDTH - (txt.len() as i32 + 4)) / 2;
@@ -102,15 +122,34 @@ impl AI {
             if self.sub_actions.is_empty() {
                 let mut turn_history = rsrc.get_mut::<TurnsHistory>().unwrap();
                 let cur_step = turn_history.steps;
+                self.searches += 1;
                 if self.seen.has_seen(ecs) {
                     self.sub_actions_success = false;
+                    //println!("  DUP");
                     self.duplicates += 1;
                 }
                 if self.sub_actions_success {
-                    self.history
-                        .possibilities
-                        .push((cur_step, self.find_possible_actions(ecs, rsrc)));
-                } else {
+                    let map = rsrc.get::<map::Map>().unwrap();
+                    if map.is_impossible(&ecs) {
+                        //self.paused = true;
+                        self.dead_ends += 1;
+                        self.sub_actions_success = false;
+                        //println!("Dead end. Impossible map");
+                    }
+                }
+                if self.sub_actions_success {
+                    let mut possibilities = self.find_possible_actions(ecs, rsrc);
+                    possibilities.shuffle(&mut thread_rng());
+                    if possibilities.len() > 0 {
+                        self.history.possibilities.push((cur_step, possibilities));
+                    //println!("UPD {:?}", self.history.possibilities);
+                    } else {
+                        self.dead_ends += 1;
+                        //println!("  DEAD-END");
+                        self.sub_actions_success = false;
+                    }
+                }
+                if !self.sub_actions_success {
                     while !self.history.possibilities.is_empty()
                         && self.history.possibilities.last().unwrap().1.is_empty()
                     {
@@ -127,32 +166,32 @@ impl AI {
                         //println!("    UNDO {}", undo_steps);
                     }
                 }
-                let mut choices = self.history.possibilities.last_mut().unwrap();
-                let i;
-                {
-                    let mut rng = rsrc.get_mut::<RandomNumberGenerator>().unwrap();
-                    i = rng.range(0, choices.1.len());
-                }
-                let (tested_action, sub_actions) = choices.1.remove(i);
-                //let (tested_action, sub_actions) = self
-                //    .history
-                //    .possibilities
-                //    .last_mut()
-                //    .unwrap()
-                //    .1
-                //    .pop()
-                //    .unwrap();
+                let (tested_action, sub_actions) = self
+                    .history
+                    .possibilities
+                    .last_mut()
+                    .unwrap()
+                    .1
+                    .pop()
+                    .unwrap();
                 //println!(
-                //    "Depth {}. Doing {:?}",
+                //    "Depth {}. Doing {:?} : {:?}",
                 //    self.history.possibilities.len(),
                 //    tested_action,
+                //    sub_actions
                 //);
+                //if self.history.possibilities.len() > 3 {
+                //    self.paused = true;
+                //}
+                self.tested_action = tested_action;
                 self.sub_actions = sub_actions;
             }
             if !self.sub_actions.is_empty() {
                 let action = self.sub_actions.remove(0);
-                self.sub_actions_success = action.play(ecs, rsrc);
+                self.sub_actions_success = true;
+                action.play(ecs, rsrc);
                 if !self.sub_actions_success {
+                    //println!("  DEAD-END2 {:?}", action);
                     self.dead_ends += 1;
                 }
                 //println!("    DO {:?}", action)
@@ -165,6 +204,10 @@ impl AI {
             match key {
                 VirtualKeyCode::Space => {
                     self.paused = !self.paused;
+                    if !self.paused {
+                        self.start_time = time::Instant::now();
+                        self.searches = 0;
+                    }
                 }
                 VirtualKeyCode::S => {
                     self.show = !self.show;
@@ -178,7 +221,7 @@ impl AI {
             }
         }
         if self.paused {
-            RunState::GameDraw
+            RunState::GameAwaitingInput
         } else {
             RunState::GameTurn
         }
@@ -197,11 +240,13 @@ impl AI {
             TurnState::PlayerDead => {
                 self.dead_ends += 1;
                 self.sub_actions_success = false;
+                //println!("  DEAD");
                 RunState::GameAwaitingInput
             }
             TurnState::PlayerAtExit => {
                 self.solutions += 1;
                 self.sub_actions_success = false;
+                //println!("  EXIT");
                 RunState::GameAwaitingInput
             }
             TurnState::Running => RunState::GameAwaitingInput,
@@ -232,19 +277,21 @@ impl AI {
             for (movable_pos,) in query2.iter(&ecs) {
                 for direction in &[Cardinal::N, Cardinal::S, Cardinal::W, Cardinal::E] {
                     let (dx, dy) = direction.get_delta_xy();
-                    if let Some(directions) = map.try_go_to(
-                        (player_pos.x, player_pos.y),
-                        (movable_pos.x + dx, movable_pos.y + dy),
-                    ) {
+                    if map.is_blocked(movable_pos.x + dx, movable_pos.y + dy) {
+                        // The direction is blocked, no point trying to move it.
+                        continue;
+                    }
+                    let (invdx, invdy) = direction.inv().get_delta_xy();
+                    let dest_x = movable_pos.x + invdx;
+                    let dest_y = movable_pos.y + invdy;
+                    if map.can_go_to((player_pos.x, player_pos.y), (dest_x, dest_y)) {
                         let mut sub_actions = vec![];
-                        // Move actions
-                        for &direction in directions.iter() {
-                            sub_actions.push(AiSubAction::Move(direction));
-                        }
+                        // Teleport
+                        sub_actions.push(AiSubAction::MoveTo(dest_x, dest_y));
                         //Push action
-                        sub_actions.push(AiSubAction::Move(direction.inv()));
+                        sub_actions.push(AiSubAction::Move(*direction));
                         actions.push((
-                            AiAction::PushAt(movable_pos.x, movable_pos.y, direction.inv()),
+                            AiAction::PushAt(movable_pos.x, movable_pos.y, *direction),
                             sub_actions,
                         ));
                     }
@@ -255,15 +302,12 @@ impl AI {
             for (activable_pos, _actuator) in query2.iter(&ecs) {
                 for direction in &[Cardinal::N, Cardinal::S, Cardinal::W, Cardinal::E] {
                     let (dx, dy) = direction.get_delta_xy();
-                    if let Some(directions) = map.try_go_to(
-                        (player_pos.x, player_pos.y),
-                        (activable_pos.x + dx, activable_pos.y + dy),
-                    ) {
+                    let dest_x = activable_pos.x + dx;
+                    let dest_y = activable_pos.y + dy;
+                    if map.can_go_to((player_pos.x, player_pos.y), (dest_x, dest_y)) {
                         let mut sub_actions = vec![];
-                        // Move actions
-                        for &direction in directions.iter() {
-                            sub_actions.push(AiSubAction::Move(direction));
-                        }
+                        // Teleport
+                        sub_actions.push(AiSubAction::MoveTo(dest_x, dest_y));
                         //Actuate action
                         sub_actions.push(AiSubAction::Actuate);
                         actions.push((

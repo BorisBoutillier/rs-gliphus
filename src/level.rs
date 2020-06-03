@@ -2,7 +2,7 @@ use super::State;
 use crate::glyphs::*;
 use crate::{
     components::{
-        Activable, ActivationKind, Actuator, BlocksLaser, BlocksTile, Cardinal, Door, Laser,
+        Activable, ActivationKind, Actuator, Block, BlocksLaser, BlocksTile, Cardinal, Door, Laser,
         Movable, Player, Position, ReflectsLaser, Renderable,
     },
     map,
@@ -16,7 +16,7 @@ use std::fs;
 pub fn load_level(gs: &mut State, level: u64) {
     match level {
         x if x <= 4 => load_level_from_file(level, &format!("resources/level_00{}.txt", level), gs),
-        x if x >= 10001 && x <= 10004 => load_level_from_file(
+        x if x >= 10001 && x <= 10006 => load_level_from_file(
             level,
             &format!("resources/ai_test_{}.txt", level - 10000),
             gs,
@@ -41,6 +41,12 @@ fn load_level_from_file(level: u64, file: &str, gs: &mut State) {
             match c {
                 '#' => map.set_tiletype(x, y, TileType::Wall),
                 '.' => map.set_tiletype(x, y, TileType::Floor),
+                ' ' => map.set_tiletype(x, y, TileType::Floor),
+                '*' => {
+                    map.set_tiletype(x, y, TileType::Floor);
+                    activations.push(spawn_weight_plate(gs, x, y));
+                    spawn_block(gs, x, y);
+                }
                 'E' => {
                     map.set_tiletype(x, y, TileType::Exit);
                     exit = (x, y);
@@ -69,7 +75,7 @@ fn load_level_from_file(level: u64, file: &str, gs: &mut State) {
                 'o' => {
                     activations.push(spawn_laser_receptor(gs, x, y));
                 }
-                'b' => {
+                'b' | '$' => {
                     spawn_block(gs, x, y);
                 }
                 '@' => {
@@ -86,7 +92,7 @@ fn load_level_from_file(level: u64, file: &str, gs: &mut State) {
 
 fn spawn_player(gs: &mut State, x: i32, y: i32) -> Entity {
     gs.ecs.insert(
-        (Player {}, BlocksTile {}),
+        (Player {},), // BlocksTile {}),
         vec![(
             Position { x, y },
             Renderable {
@@ -126,7 +132,7 @@ fn spawn_laser(gs: &mut State, x: i32, y: i32, direction: Cardinal) -> Entity {
 
 fn spawn_block(gs: &mut State, x: i32, y: i32) -> Entity {
     gs.ecs.insert(
-        (BlocksTile {}, Movable {}, BlocksLaser {}),
+        (Block {}, BlocksTile {}, Movable {}, BlocksLaser {}),
         vec![(
             Position { x, y },
             Renderable {

@@ -8,3 +8,4 @@ edition = "2018"
 bracket-lib = "*"
 legion = { git = "https://github.com/TomGillen/legion" }
 tracing-subscriber = "*"
+rand="*"

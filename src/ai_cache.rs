@@ -53,4 +53,7 @@ impl AiStatesCache {
             false
         }
     }
+    pub fn get_size(&self) -> usize {
+        self.seen.len()
+    }
 }
